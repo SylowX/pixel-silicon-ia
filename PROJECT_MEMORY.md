@@ -91,9 +91,9 @@ La oficina de pixel art mapea exactamente 6 escritorios (`char_0` a `char_5`), c
 - **`6_final.gds`**: Máscara binaria GDSII para fabricación en fundición.
 - **Reportes y Métricas**: `6_report.log` y `pipeline_report.json` con área, potencia, timing y celdas.
 
-### Visualización de OpenROAD GUI
-- **Ejecución actual**: OpenROAD **NO** está instalado en Windows; corre en el contenedor Linux de Docker y se proyecta a Windows mediante el servidor X11 de **WSLg** (`\\wsl.localhost\Ubuntu\tmp\.X11-unix`).
-- **Visor Web Futuro**: Al disponer de los archivos `.def` y `.gds`, es técnicamente viable implementar un visor interactivo dentro del navegador (usando Canvas 2D/WebGL o snapshots de capas) sin depender de ventanas externas.
+### Visualización de OpenROAD GUI & Visor Web
+- **Ejecución actual**: OpenROAD corre en el contenedor Linux de Docker y actualmente se proyecta mediante X11 de WSLg (`\\wsl.localhost\Ubuntu\tmp\.X11-unix`).
+- **Decisión de Arquitectura**: Se ha seleccionado formalmente implementar la **Opción B: Visor Nativo Canvas / WebGL (Lector DEF/GDS)** directamente embebido en el navegador, eliminando la dependencia de ventanas externas de WSLg o servidores VNC.
 
 ### Las 10 Etapas Monitoreadas por el Pipeline
 1. `pdk`: Validación del kit de diseño Sky130.
@@ -147,3 +147,66 @@ cd C:\Users\carlo\pixel-agents-main\SiliconIA
 2. **Seguridad local**: Cualquier nuevo endpoint que invoque procesos en el host debe usar `localOnlyGuard` (`src/lib/localGuard.ts`).
 3. **Calibración geométrica de personajes**: Si se modifica el fondo del edificio o se mueven muebles, respetar las fracciones de altura `SLOTS_INIT.studio.y = 0.493` y `ZONE_WALK_FLOOR_Y.studio = 0.500`.
 4. **Persistencia de telemetría**: Si se agregan nuevas etapas o métricas a `silicon_pipeline.py`, deben reflejarse tanto en `TASK_DEFS` y `PIPELINE_STAGES` en `src/lib/siliconia.ts` como en `SiliconBoard.tsx`.
+
+---
+
+## 8. Próxima Tarea Aprobada: Visor Nativo Canvas / WebGL (Lector DEF/GDS) [Opción B]
+
+> **ESTADO: APROBADO PARA IMPLEMENTACIÓN**  
+> El usuario ha seleccionado formalmente la **Opción B** para visualizar los resultados de silicio directamente en el navegador, sin depender de ventanas externas de WSLg ni de tener OpenROAD instalado localmente en Windows.
+
+### 8.1. Objetivo
+Desarrollar un visor de layout físico de circuitos integrados embebido directamente en la aplicación web (`http://localhost:3031/pixel-agents`), que lea los archivos resultantes del pipeline (`6_final.def` y opcionalmente `.gds`) y renderice el chip en un lienzo interactivo de alto rendimiento (HTML5 Canvas 2D / WebGL) a 60 FPS.
+
+### 8.2. Archivos Fuente del Circuito
+Ubicados en `SiliconIA/silicon-runs/<runId>/outputs/`:
+- **`6_final.def`**: Archivo de texto estructurado en estándar IEEE/Cadence DEF (Design Exchange Format). Contiene:
+  - `UNITS DISTANCE MICRONS <factor>`: Escala de coordenadas (típicamente 1000 DBU por micra en Sky130).
+  - `DIEAREA ( x1 y1 ) ( x2 y2 )`: Límites físicos del silicio.
+  - `COMPONENTS <n>`: Lista de celdas colocadas con nombre, tipo (`sky130_fd_sc_hd__...`), coordenadas `( X Y )` y orientación (`N`, `S`, `FN`, etc.).
+  - `PINS <n>`: Pines de entrada/salida en el perímetro del chip con sus capas y posiciones.
+  - `SPECIALNETS`: Rieles de alimentación (`VDD`, `VSS`) y mallas globales.
+  - `NETS`: Enrutamiento de señales en capas metálicas (`li1`, `met1`, `met2`, `met3`, `met4`, `met5`) con pares de coordenadas de segmentos de pistas.
+
+### 8.3. Arquitectura de Implementación
+
+#### 1. Backend Parser (`src/app/api/pixel-agents/silicon-layout/route.ts`)
+- **Método**: `GET /api/pixel-agents/silicon-layout?runId=<runId>&layerDetail=<low|high>`
+- **Función**:
+  - Lee de forma eficiente el archivo `6_final.def` del run solicitado.
+  - Parsea las secciones principales: `DIEAREA`, `COMPONENTS`, `PINS`, y opcionalmente las pistas de `NETS` / `SPECIALNETS`.
+  - Puede cachear el resultado en formato liviano JSON (`silicon_layout.json` dentro de la carpeta del run) para cargas instantáneas subsecuentes.
+  - Retorna un payload JSON optimizado con:
+    ```json
+    {
+      "runId": "un-20261004-175043",
+      "units": 1000,
+      "dieArea": { "x1": 0, "y1": 0, "x2": 150000, "y2": 150000 },
+      "components": [
+        { "name": "_042_", "type": "sky130_fd_sc_hd__nand2_1", "x": 12400, "y": 25000, "orient": "N", "w": 1380, "h": 2720 }
+      ],
+      "pins": [...],
+      "netsCount": 184,
+      "stats": { "cellCount": 115, "areaUm2": 22500 }
+    }
+    ```
+
+#### 2. Componente Frontend (`src/app/pixel-agents/SiliconLayoutViewer.tsx`)
+- **Lienzo**: Canvas interactivo con transformaciones matriciales 2D (Pan & Zoom mediante arrastre y rueda del ratón).
+- **Capas Conmutables (Layer Toggles)**:
+  - Marco del Die (`DIEAREA`).
+  - Celdas Estándar (renderizadas con colores codificados según tipo: compuertas lógicas, flip-flops, buffers).
+  - Rieles de Alimentación (VDD / VSS).
+  - Pistas Metálicas (Met1 azul, Met2 naranja, Met3 verde, etc.).
+  - Pines I/O perimetrales con etiquetas de señal (`clk`, `rst`, `data_in`, etc.).
+- **Inspección de Celdas (Hover / Click Inspector)**:
+  - Al pasar el cursor o hacer clic sobre una compuerta, muestra un popup contextual flotante con el nombre de la instancia, tipo de celda, dimensiones y posición exacta en micras.
+- **Controles Rápidos**:
+  - `Centrar / Reset Zoom` (ajuste automático a la vista completa del die).
+  - Selector de resolución / nivel de detalle.
+  - Selector de capas individuales (on/off).
+
+#### 3. Puntos de Integración en la UI
+- **`SiliconSidebar.tsx` / `SiliconHistory.tsx`**: Añadir un botón destacado **"Ver Layout Web (DEF)"** junto a cada corrida completada que disponga de archivos de salida.
+- **Modal o Pestaña Integrada**: Al hacer clic, abre el visor como un modal flotante o una vista de pantalla completa estilizada con la paleta retro/cyberpunk del proyecto.
+
