@@ -1,0 +1,16 @@
+[
+  {
+    "phase": "sim",
+    "attempt": 1,
+    "error": "make: Entering directory '/workspace/silicon-runs/un-20261004-175043/sim_build/multiplier8'\nmake: Leaving directory '/workspace/silicon-runs/un-20261004-175043/sim_build/multiplier8'\n\n/usr/local/lib/python3.10/dist-packages/cocotb_tools/makefiles/simulators/Makefile.verilator:29: *** cocotb requires Verilator 5.036 or later, but using 4.038.  Stop.\n",
+    "category": "INFRASTRUCTURE_ERROR",
+    "round": 1
+  },
+  {
+    "phase": "sim",
+    "attempt": 1,
+    "error": "make: Entering directory '/workspace/silicon-runs/un-20261004-175043/sim_build/multiplier8'\nmake: Leaving directory '/workspace/silicon-runs/un-20261004-175043/sim_build/multiplier8'\n\n/usr/local/lib/python3.10/dist-packages/cocotb_tools/makefiles/simulators/Makefile.verilator:29: *** cocotb requires Verilator 5.036 or later, but using 4.038.  Stop.\n",
+    "category": "INFRASTRUCTURE_ERROR",
+    "round": 1
+  }
+]

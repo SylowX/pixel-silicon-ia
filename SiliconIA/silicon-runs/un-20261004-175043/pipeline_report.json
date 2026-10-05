@@ -1,0 +1,85 @@
+{
+  "timestamp": "2026-10-04T18:17:51.877373",
+  "prompt": "Un multiplicador de 8x8 bits combinacional, con salida de 16 bits\n",
+  "run_dir": "/workspace/silicon-runs/un-20261004-175043",
+  "phases": {
+    "coresmith": {
+      "success": true,
+      "netlist": null,
+      "sdc": null,
+      "rtl_files": [
+        "/workspace/silicon-runs/un-20261004-175043/rtl/multiplier8/multiplier8.v"
+      ],
+      "run_dir": "/workspace/silicon-runs/un-20261004-175043"
+    },
+    "orfs": {
+      "success": true,
+      "design_name": "multiplier8",
+      "flow_results": {
+        "synth": {
+          "success": true
+        },
+        "floorplan": {
+          "success": true
+        },
+        "place": {
+          "success": true
+        },
+        "cts": {
+          "success": true
+        },
+        "route": {
+          "success": true
+        },
+        "finish": {
+          "success": true
+        }
+      },
+      "outputs": {
+        "odb_final": "/workspace/silicon-runs/un-20261004-175043/outputs/6_final.odb",
+        "gds": "/workspace/silicon-runs/un-20261004-175043/outputs/6_final.gds",
+        "def_final": "/workspace/silicon-runs/un-20261004-175043/outputs/6_final.def",
+        "netlist": "/workspace/silicon-runs/un-20261004-175043/outputs/6_final.v",
+        "sdc_final": "/workspace/silicon-runs/un-20261004-175043/outputs/6_final.sdc",
+        "odb_route": "/workspace/silicon-runs/un-20261004-175043/outputs/5_route.odb",
+        "odb_place": "/workspace/silicon-runs/un-20261004-175043/outputs/3_place.odb",
+        "odb_floorplan": "/workspace/silicon-runs/un-20261004-175043/outputs/2_floorplan.odb",
+        "odb_synth": "/workspace/silicon-runs/un-20261004-175043/outputs/1_synth.odb",
+        "floorplan_log": "/workspace/silicon-runs/un-20261004-175043/outputs/2_1_floorplan.log",
+        "place_log": "/workspace/silicon-runs/un-20261004-175043/outputs/3_5_place_dp.log",
+        "cts_log": "/workspace/silicon-runs/un-20261004-175043/outputs/4_1_cts.log",
+        "route_log": "/workspace/silicon-runs/un-20261004-175043/outputs/5_2_route.log",
+        "final_report": "/workspace/silicon-runs/un-20261004-175043/outputs/6_report.log"
+      },
+      "config_mk": "/OpenROAD-flow-scripts/flow/designs/sky130hd/multiplier8/config.mk",
+      "metrics": {
+        "design_area_um2": 2400.0,
+        "utilization_pct": 50.0,
+        "total_power_w": 0.000211,
+        "cell_count": 748,
+        "cell_area_um2": 4754.56
+      }
+    },
+    "pdk": {
+      "success": true,
+      "checks": {
+        "PDK platform directory": {
+          "path": "/OpenROAD-flow-scripts/flow/platforms/sky130hd",
+          "exists": true
+        },
+        "Liberty file": {
+          "path": "/OpenROAD-flow-scripts/flow/platforms/sky130hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib",
+          "exists": true
+        },
+        "LEF file": {
+          "path": "/OpenROAD-flow-scripts/flow/platforms/sky130hd/lef/sky130_fd_sc_hd_merged.lef",
+          "exists": true
+        },
+        "Tech LEF": {
+          "path": "/OpenROAD-flow-scripts/flow/platforms/sky130hd/lef/sky130_fd_sc_hd.tlef",
+          "exists": true
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+blocks:
+  multiplier8:
+    tier: 1
+    rtl_target: "rtl/multiplier8/multiplier8.v"
+    testbench: "tb/cocotb/test_multiplier8.py"
+    description: |
+      Un multiplicador de 8x8 bits combinacional, con salida de 16 bits
+
+      Requirements & Constraints:
+      - Target PDK: SkyWater Sky130 (130nm) with sky130_fd_sc_hd
+      - Clock Frequency: 50 MHz
+      - Verilog-2005 compliant synthesizable RTL
+      - Synchronous active-low reset (rst_n) when stateful; combinational if no memory/registers required
+      - No tri-state buffers, no async resets, no latches
+      - Synthesizable with Yosys

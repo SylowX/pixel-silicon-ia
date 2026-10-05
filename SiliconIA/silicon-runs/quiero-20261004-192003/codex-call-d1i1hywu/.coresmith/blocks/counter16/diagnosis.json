@@ -1,0 +1,12 @@
+{
+  "diagnosis": "The counter16 simulation failure cannot be diagnosed from this workspace because the evidence bundle was not staged: the workspace is empty and the specified previous_error.txt, sim_attempt log, RTL, testbench, uArch specification, frozen interface contract, constraints, attempt history, and VCD are all absent. This is an infrastructure/evidence-provisioning failure, not evidence of an RTL or testbench defect.",
+  "category": "INFRASTRUCTURE_ERROR",
+  "suggested_fix": "Restore or remount the counter16 run artifacts into this workspace, including at minimum .coresmith/blocks/counter16/previous_error.txt, the latest .coresmith/step_logs/counter16/sim_attempt*.log, rtl/counter16 Verilog, tb/cocotb/test_counter16.py, arch/uarch_specs/counter16.md, and .coresmith/interface_contracts.json; then rerun diagnosis against the first logged failure. If the failure is a signal mismatch, also restore sim_build/counter16/dump.vcd or rerun simulation with VCD dumping enabled into a separate debug_scratch build directory.",
+  "affected_blocks": [],
+  "escalate": false,
+  "confidence": 1.0,
+  "constraints": [],
+  "needs_human": true,
+  "human_question": "Can you restore or provide the missing counter16 logs, RTL, testbench, uArch/interface contract, attempt history, and (if generated) VCD so the original simulation failure can be causally diagnosed?",
+  "is_testbench_bug": false
+}

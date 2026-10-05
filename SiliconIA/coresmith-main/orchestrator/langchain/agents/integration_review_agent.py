@@ -1,0 +1,412 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+"""
+IntegrationReviewAgent -- Reviews all uArch specs for cross-block
+interface coherence before RTL generation.
+
+Reads Section 9 Verilog stubs from every spec, cross-references against
+the block diagram connections, and edits spec files on disk to fix
+mismatches in widths, directions, protocols, and naming.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import shutil
+from pathlib import Path
+from typing import Any
+
+from opentelemetry import trace
+
+from .coresmith_llm import DEFAULT_MODEL, ClaudeLLM
+
+_tracer = trace.get_tracer(__name__)
+
+_PROMPT_FILE = (
+    Path(__file__).resolve().parent.parent / "prompts" / "integration_review.md"
+)
+if _PROMPT_FILE.exists():
+    SYSTEM_PROMPT = _PROMPT_FILE.read_text()
+else:
+    SYSTEM_PROMPT = (
+        "You are a chip integration engineer. Review all uArch specs "
+        "for interface coherence and fix mismatches by editing files on disk."
+    )
+
+
+_JSON_FENCE_RE = re.compile(r"```json\s*(.*?)```", re.DOTALL)
+
+
+def _endpoint_block(endpoint: Any) -> str | None:
+    if endpoint is None:
+        return None
+    text = str(endpoint)
+    if "." in text:
+        return text.split(".", 1)[0]
+    return text or None
+
+
+def _filter_connections_for_blocks(
+    block_diagram: dict[str, Any],
+    block_names: list[str],
+    context_block_names: list[str] | None = None,
+) -> tuple[dict[str, Any], int]:
+    """Keep current-tier edges whose two specifications are available.
+
+    The pipeline reviews one tier at a time. Architecture diagrams can contain
+    edges to later-tier blocks whose uArch specs have not been generated yet;
+    those edges are not actionable during the current tier review. Existing
+    adjacent specs from earlier tiers are read-only context, so their edges
+    must be reviewed when the current endpoint becomes available.
+    """
+    review_blocks = set(block_names)
+    available_blocks = review_blocks | set(context_block_names or [])
+    filtered = dict(block_diagram)
+    filtered_blocks = []
+    for block in block_diagram.get("blocks", []):
+        if not isinstance(block, dict) or block.get("name") in available_blocks:
+            filtered_blocks.append(block)
+    filtered["blocks"] = filtered_blocks
+
+    kept = []
+    deferred = 0
+    for conn in block_diagram.get("connections", []):
+        if not isinstance(conn, dict):
+            kept.append(conn)
+            continue
+        src = _endpoint_block(conn.get("from") or conn.get("source") or conn.get("src"))
+        dst = _endpoint_block(conn.get("to") or conn.get("dest") or conn.get("destination"))
+        if (src in available_blocks and dst in available_blocks
+                and (src in review_blocks or dst in review_blocks)):
+            kept.append(conn)
+        else:
+            deferred += 1
+    filtered["connections"] = kept
+    return filtered, deferred
+
+
+def _balanced_json_objects(text: str) -> list[str]:
+    """Return every brace-balanced ``{...}`` span in ``text``, in order.
+
+    A regex cannot match nested objects, so the counts block is scanned by
+    hand (skipping braces inside string literals) -- otherwise a summary
+    carrying an extra nested key parses as "no counts at all".
+    """
+    objs: list[str] = []
+    depth = 0
+    start = -1
+    in_str = False
+    esc = False
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0 and start >= 0:
+                objs.append(text[start:i + 1])
+    return objs
+
+
+def _extract_issue_counts(summary: str) -> tuple[int, int] | None:
+    """Extract issues_found / issues_fixed from the LLM's JSON summary block.
+
+    Returns ``None`` when no counts could be parsed. That is deliberately
+    distinct from (0, 0): the caller reads issues_found == 0 as a clean,
+    auto-approvable review and issues_fixed == 0 as "no spec was edited", so
+    reporting zeros for an unparsed summary would silently turn a
+    found-and-fixed review into a green no-op.
+    """
+    candidates: list[str] = []
+    for m in _JSON_FENCE_RE.finditer(summary):
+        candidates.extend(_balanced_json_objects(m.group(1)))
+    if not candidates:
+        candidates = _balanced_json_objects(summary)
+
+    parsed: tuple[int, int] | None = None
+    for raw in candidates:
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(data, dict):
+            continue
+        if "issues_found" not in data and "issues_fixed" not in data:
+            continue
+        try:
+            found = int(data.get("issues_found", 0))
+            fixed = int(data.get("issues_fixed", 0))
+        except (ValueError, TypeError):
+            continue
+        parsed = (max(found, 0), max(fixed, 0))  # last counts block wins
+    return parsed
+
+
+def _parse_issue_counts(summary: str) -> tuple[int, int]:
+    """Counts from the summary, (0, 0) when there is no counts block."""
+    return _extract_issue_counts(summary) or (0, 0)
+
+
+class IntegrationReviewAgent:
+    """Reviews all uArch specs for cross-block interface coherence."""
+
+    def __init__(self, model: str = DEFAULT_MODEL, temperature: float = 0.1):
+        self.llm = ClaudeLLM(
+            model=model,
+            timeout=int(os.environ.get("CORESMITH_INTEGRATION_REVIEW_TIMEOUT", "2700")),
+        )
+
+    async def review(
+        self,
+        block_names: list[str],
+        project_root: str,
+    ) -> dict[str, Any]:
+        """Review all uArch specs for interface coherence.
+
+        Args:
+            block_names: Names of blocks whose specs to review.
+            project_root: Path to project root.
+
+        Returns:
+            Dict with keys: summary (str), issues_found (int), issues_fixed (int)
+        """
+        with _tracer.start_as_current_span("Integration Review") as span:
+            span.set_attribute("block_count", len(block_names))
+
+            root = Path(project_root)
+
+            # Soft write-lock on the canonical uArch specs: clone each into
+            # arch/uarch_specs_review/ and let the LLM Edit/Write against
+            # the copies.  Without this, the integration-review agent
+            # rewrites the originals AFTER RTL has been committed against
+            # them -- bytes that the block-level cocotb tests already
+            # validated get replaced by 30-40 KB the RTL was never built
+            # for.  Discovered live during the video codec codec run.
+            #
+            # Behaviour: callers can opt out by setting
+            # CORESMITH_INTEGRATION_REVIEW_INPLACE=1 (e.g. for legacy flows).
+            inplace = os.environ.get(
+                "CORESMITH_INTEGRATION_REVIEW_INPLACE", ""
+            ).strip().lower() in {"1", "true", "yes", "on"}
+
+            review_dir = root / "arch" / "uarch_specs_review"
+            spec_paths = []
+            for name in block_names:
+                src = root / "arch" / "uarch_specs" / f"{name}.md"
+                if not src.exists():
+                    continue
+                if inplace:
+                    spec_paths.append(str(src))
+                    continue
+                review_dir.mkdir(parents=True, exist_ok=True)
+                dst = review_dir / f"{name}.md"
+                shutil.copy2(src, dst)
+                spec_paths.append(str(dst))
+
+            # Byte snapshot of the exact files handed to the agent, so an
+            # unparseable summary can still be distinguished from a genuine
+            # no-op review (see _parse_issue_counts).
+            spec_before: dict[str, bytes | None] = {}
+            for sp in spec_paths:
+                try:
+                    spec_before[sp] = Path(sp).read_bytes()
+                except OSError:
+                    spec_before[sp] = None
+
+            bd_path = root / ".coresmith" / "block_diagram.json"
+            review_bd_path = bd_path
+            deferred_connection_count = 0
+            context_specs: dict[str, Path] = {}
+            context_before: dict[Path, bytes] = {}
+            if bd_path.exists():
+                try:
+                    block_diagram = json.loads(bd_path.read_text())
+                    current = set(block_names)
+                    neighbors = set()
+                    for conn in block_diagram.get("connections", []):
+                        if not isinstance(conn, dict):
+                            continue
+                        endpoints = {
+                            _endpoint_block(conn.get("from") or conn.get("source") or conn.get("src")),
+                            _endpoint_block(conn.get("to") or conn.get("dest") or conn.get("destination")),
+                        }
+                        if endpoints & current:
+                            neighbors.update(endpoints - current - {None})
+                    for name in sorted(neighbors):
+                        src = root / "arch" / "uarch_specs" / f"{name}.md"
+                        if not src.is_file():
+                            continue
+                        dst = review_dir / "context" / f"{name}.md"
+                        dst.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(src, dst)
+                        context_specs[name] = dst
+                        context_before[dst] = dst.read_bytes()
+                        context_before[src] = src.read_bytes()
+                    filtered, deferred_connection_count = _filter_connections_for_blocks(
+                        block_diagram, block_names, list(context_specs)
+                    )
+                    review_bd_path = root / ".coresmith" / "integration_review_block_diagram.json"
+                    review_bd_path.write_text(json.dumps(filtered, indent=2))
+                except (json.JSONDecodeError, OSError, TypeError):
+                    review_bd_path = bd_path
+
+            parts = [
+                "Review the following uArch specs for cross-block interface coherence.",
+                "",
+                "## uArch Spec Files",
+                "Read each of these files:",
+            ]
+            for sp in spec_paths:
+                parts.append(f"- {sp}")
+
+            if context_specs:
+                parts.extend([
+                    "", "## Read-only Adjacent uArch Specs",
+                    "These existing specs belong to other tiers. Read them to check both "
+                    "ends of the connections. Do not edit them or their canonical originals. "
+                    "Only the current-tier review copies listed above may be edited. "
+                    "If a fix requires changing another tier, report it as an unresolved "
+                    "issue requiring that block's re-verification; do not claim it fixed.",
+                ])
+                parts.extend(f"- {name}: {path}" for name, path in context_specs.items())
+
+            parts.append("")
+            parts.append("## Authoritative Interface Contracts")
+            from orchestrator.langgraph.contract_conformance import format_contract_port_table
+
+            from .contract_lookup import format_block_contracts_prompt, load_block_contracts
+            from .rtl_generator import _constraint_precedence_line
+            parts.append(_constraint_precedence_line())
+            for name in [*block_names, *context_specs]:
+                table = format_contract_port_table(project_root, name)
+                if table:
+                    parts.append(f"### {name}\n{table}")
+                contract_view = load_block_contracts(project_root, name)
+                if contract_view.get("edges"):
+                    parts.append(format_block_contracts_prompt(name, contract_view))
+            parts.append(
+                "The tables above are the same naming authority used by the RTL author "
+                "and conformance gate. Preserve their exact names. A bundle label is not "
+                "a scalar RTL port: match every decomposed field and sum its widths. "
+                "Do not rename contract-prefixed fields to bare logical field names."
+            )
+            parts.append("")
+            parts.append("## Architecture Files")
+            parts.append(f"- Reviewable block diagram connections (including available adjacent tiers): {review_bd_path}")
+            if deferred_connection_count:
+                parts.append(
+                    f"- Connections outside this review's available scope: {deferred_connection_count}. "
+                    "These either lack a generated endpoint spec or do not touch the current tier."
+                )
+
+            ers_path = root / "arch" / "ers_spec.md"
+            if ers_path.exists():
+                parts.append(f"- ERS: {ers_path}")
+
+            prd_path = root / ".coresmith" / "prd_spec.json"
+            if prd_path.exists():
+                try:
+                    prd = json.loads(prd_path.read_text())
+                    prd_doc = prd.get("prd", prd.get("ers", {}))
+                    dataflow = prd_doc.get("dataflow", {})
+                    bus_protocol = dataflow.get("bus_protocol", "unknown")
+                    data_width = dataflow.get("data_width_bits", "unknown")
+                    parts.append(f"- PRD bus_protocol: {bus_protocol}")
+                    parts.append(f"- PRD data_width_bits: {data_width}")
+                except (json.JSONDecodeError, OSError):
+                    pass
+
+            parts.append("")
+            parts.append(
+                "Check every connection in the reviewable block diagram. For each, verify "
+                "port widths, directions, protocols, and clock/reset naming match "
+                "across connected blocks. Do not report missing ports or missing specs "
+                "for connections outside the available scope. If you find mismatches, "
+                "edit only current-tier review copies to fix them. Adjacent context specs "
+                "are read-only. Report a summary of findings and unresolved issues."
+            )
+
+            user_message = "\n".join(parts)
+
+            content = await self.llm.call(
+                system=SYSTEM_PROMPT,
+                prompt=user_message,
+                run_name="Integration Review",
+            )
+
+            changed_context = []
+            for path, before in context_before.items():
+                if not path.exists() or path.read_bytes() != before:
+                    changed_context.append(path)
+                    # Preserve the previously verified canonical bytes even
+                    # when a worker ignores the read-only instruction. The
+                    # review still fails and none of its edits are adopted.
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(before)
+            if changed_context:
+                raise ValueError(
+                    "Integration review changed read-only adjacent spec; restored: "
+                    + ", ".join(map(str, changed_context))
+                )
+
+            summary = content.strip() if content else "No issues found."
+
+            edited_specs = []
+            for sp in spec_paths:
+                try:
+                    if Path(sp).read_bytes() != spec_before.get(sp):
+                        edited_specs.append(sp)
+                except OSError:
+                    continue
+
+            # Targeted revise: the caller re-enters ONLY these blocks (plus
+            # any the chip lead names) and adopts the reviewed copy as the
+            # canonical spec, instead of re-fanning out the whole tier.
+            edited_blocks = [Path(sp).stem for sp in edited_specs]
+            reviewed_specs = {Path(sp).stem: sp for sp in spec_paths}
+
+            counts = _extract_issue_counts(summary)
+            if counts is None:
+                # No parseable counts block. Taking (0, 0) on faith would read
+                # downstream as a clean review needing no regeneration even
+                # when the agent edited specs on disk, so use the evidence we
+                # actually have: the specs this call changed.
+                issues_found = issues_fixed = len(edited_specs)
+                summary = (
+                    "NOTE: the review summary carried no parseable "
+                    '{"issues_found": ..., "issues_fixed": ...} JSON block; '
+                    f"the counts below are derived from the {len(edited_specs)} "
+                    "uArch spec file(s) this review edited on disk.\n\n"
+                    f"{summary}"
+                )
+            else:
+                issues_found, issues_fixed = counts
+
+            # Surface the review-dir so the caller (or the next iteration's
+            # uArch generator) can compare canonical specs vs review copies
+            # and decide whether to restart blocks.
+            return {
+                "summary": summary,
+                "issues_found": issues_found,
+                "issues_fixed": issues_fixed,
+                "edited_blocks": edited_blocks,
+                "reviewed_specs": reviewed_specs,
+                "review_dir": (
+                    str(review_dir) if not inplace and review_dir.exists() else None
+                ),
+            }

@@ -1,0 +1,17 @@
+=== LINT LOG ===
+Timestamp: 2026-10-05T02:41:05
+Block: counter16
+Attempt: 1
+Command: verilator --lint-only -Wall -Wno-fatal -Wno-EOFNEWLINE /workspace/silicon-runs/quiero-20261004-192003/rtl/counter16/counter16.v
+Return code: 0
+
+=== STDOUT ===
+
+
+=== STDERR ===
+%Warning-UNUSED: /workspace/silicon-runs/quiero-20261004-192003/rtl/counter16/counter16.v:24:17: Bits of signal are not used: 'count_increment_ext'[16]
+                                                                                               : ... In instance counter16
+   24 |     wire [16:0] count_increment_ext;
+      |                 ^~~~~~~~~~~~~~~~~~~
+                 ... Use "/* verilator lint_off UNUSED */" and lint_on around source to disable this message.
+

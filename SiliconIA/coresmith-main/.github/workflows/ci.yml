@@ -1,0 +1,62 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # main's CI has run 2.5-6 h for months and run 30994350130 was cancelled at
+    # GitHub's 6 h ceiling, which reports as an unexplained red. A ceiling of
+    # our own well under that turns a runaway into a fast, legible failure.
+    # Measured on this branch: 3.11 ~70 min, 3.12 ~95 min end to end, so 120
+    # is a backstop with headroom, not a tripwire. See the PR for the residual
+    # per-test cost that is still CI-only and not yet explained.
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Node + Claude CLI
+        # Tests instantiate ClaudeLLM() at import time, which calls
+        # _find_claude_binary() and raises FileNotFoundError when the
+        # `claude` binary is missing from PATH.
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
+          sudo apt-get install -y nodejs
+          sudo npm install -g @anthropic-ai/claude-code
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e "orchestrator[dev]"
+
+      - name: Lint with ruff
+        run: ruff check orchestrator/
+
+      - name: Run tests
+        # T0: every PR. Fault/replay/failclosed/provider + stage-fixture unit
+        # tests carry no excluding marker, so they run here automatically.
+        run: pytest orchestrator/tests/ -v -m "not live_llm and not requires_nix and not e2e"
+
+      - name: T1 stage-fixture gate
+        # Resume-from-checkpoint stage fixtures (seconds; PR mode = skip on
+        # schema drift so a stale fixture never reddens an unrelated PR). The
+        # nightly job re-runs this with CORESMITH_STAGE_STRICT=1 to catch drift.
+        run: pytest orchestrator/tests/ -v -m stage_fixture

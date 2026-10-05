@@ -1,0 +1,75 @@
+# =============================================================================
+# SiliconIA Pipeline Configuration
+# Prompt → CoreSmith → OpenROAD-flow-scripts → Sky130 → OpenROAD GUI
+# =============================================================================
+
+# --- Project Paths (host machine, Windows) ---
+paths:
+  workspace_root: "C:\\Users\\carlo\\SiliconIA"
+  coresmith: "C:\\Users\\carlo\\SiliconIA\\coresmith-main"
+  openroad_flow_scripts: "C:\\Users\\carlo\\SiliconIA\\OpenROAD-flow-scripts-master"
+  openroad: "C:\\Users\\carlo\\SiliconIA\\OpenROAD-master"
+  eda_tools_installer: "C:\\Users\\carlo\\SiliconIA\\EDA-Tools-Installer-main"
+  # Run output directory (created per-run inside Docker)
+  runs_dir: "C:\\Users\\carlo\\SiliconIA\\silicon-runs"
+
+# --- Container Paths (Linux inside Docker) ---
+container:
+  workspace: "/workspace"
+  coresmith: "/workspace/coresmith-main"
+  openroad_flow_scripts: "/OpenROAD-flow-scripts"
+  openroad: "/OpenROAD-flow-scripts/tools/install/OpenROAD"
+  pdk_root: "/OpenROAD-flow-scripts/flow/platforms"
+  runs_dir: "/workspace/silicon-runs"
+
+# --- Docker ---
+docker:
+  image_name: "siliconia-pipeline"
+  image_tag: "latest"
+  container_name: "siliconia"
+  # Forward X11 for OpenROAD GUI (WSL2/Linux)
+  display: "${DISPLAY}"
+  # Port for CoreSmith daemon webview
+  webview_port: 3000
+  # Port for CoreSmith daemon API
+  daemon_port: 8080
+
+# --- LLM Provider ---
+llm:
+  provider: "codex"  # codex | claude | opencode
+  codex_model: "gpt-5.6-sol"
+  codex_sandbox: "danger-full-access"
+  # Model for block-level agents
+  block_model: "gpt-5.6-sol"
+  # Reasoning effort
+  reasoning_effort: "high"
+
+# --- PDK (Sky130) ---
+pdk:
+  name: "sky130"
+  variant: "sky130A"
+  std_cell_library: "sky130_fd_sc_hd"
+  target_clock_mhz: 50
+  process_nm: 130
+  supply_voltage: 1.8
+
+# --- OpenROAD Flow Scripts ---
+orfs:
+  platform: "sky130hd"
+  core_utilization: 40
+  target_density: 0.6
+  tns_end_percent: 100
+
+# --- Pipeline Defaults ---
+pipeline:
+  # Maximum retries per phase
+  max_retries: 3
+  # Timeouts (seconds)
+  architecture_timeout: 600
+  rtl_timeout: 3600
+  synthesis_timeout: 3600
+  pnr_timeout: 7200
+  # Auto-approve interrupts (false = manual review)
+  auto_approve: false
+  # Skip architecture phase (use provided blocks.yaml directly)
+  skip_architecture: true

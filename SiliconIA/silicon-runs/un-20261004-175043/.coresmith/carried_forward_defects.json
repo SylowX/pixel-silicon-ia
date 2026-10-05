@@ -1,0 +1,11 @@
+[
+  {
+    "gate": "uarch_golden",
+    "kind": "no_reference_golden",
+    "advisory": true,
+    "unmodeled": "block 'multiplier8' has no reference golden model (python_source absent), so its uArch spec and RTL were never checked against one",
+    "detail": "block 'multiplier8' has no reference golden model (python_source absent), so its uArch spec and RTL were never checked against one",
+    "first_divergence_block": "multiplier8",
+    "note": ""
+  }
+]

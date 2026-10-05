@@ -1,0 +1,141 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+"""Section 7a: engine git-SHA provenance stamped into run state + final report."""
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from orchestrator.langgraph import final_report as fr
+from orchestrator.utils import engine_git_sha
+
+
+def test_engine_git_sha_returns_str():
+    sha = engine_git_sha()
+    assert isinstance(sha, str)
+    # In this checkout it is a short hex sha; tolerate "" in a non-git env.
+    assert sha == "" or all(c in "0123456789abcdef" for c in sha)
+
+
+@pytest.mark.parametrize("packed", [False, True])
+def test_linked_worktree_uses_common_refs(tmp_path, monkeypatch, packed):
+    from orchestrator import utils
+
+    checkout = tmp_path / "checkout"
+    source = checkout / "orchestrator/utils.py"
+    source.parent.mkdir(parents=True)
+    source.touch()
+    common = tmp_path / "main.git"
+    gitdir = common / "worktrees/evaluation"
+    gitdir.mkdir(parents=True)
+    (checkout / ".git").write_text("gitdir: ../main.git/worktrees/evaluation\n")
+    (gitdir / "commondir").write_text("../..\n")
+    (gitdir / "HEAD").write_text("ref: refs/heads/evaluation\n")
+    sha = "a" * 40
+    if packed:
+        ref = common / "packed-refs"
+        ref.write_text(f"# pack-refs\n{sha} refs/heads/evaluation\n")
+    else:
+        ref = common / "refs/heads/evaluation"
+        ref.parent.mkdir(parents=True)
+        ref.write_text(sha + "\n")
+    monkeypatch.setattr(utils, "__file__", str(source))
+    assert utils.engine_git_sha(False) == sha
+    assert utils.engine_git_sha() == sha[:12]
+    # A later checkout must not keep a cached original/unknown revision.
+    new_sha = "b" * 40
+    ref.write_text(f"{new_sha} refs/heads/evaluation\n" if packed else new_sha + "\n")
+    assert utils.engine_git_sha(False) == new_sha
+
+
+def test_detached_head_provenance(tmp_path, monkeypatch):
+    from orchestrator import utils
+
+    source = tmp_path / "orchestrator/utils.py"
+    source.parent.mkdir()
+    source.touch()
+    gitdir = tmp_path / ".git"
+    gitdir.mkdir()
+    sha = "c" * 40
+    (gitdir / "HEAD").write_text(sha + "\n")
+    monkeypatch.setattr(utils, "__file__", str(source))
+    assert utils.engine_git_sha(False) == sha
+
+
+def test_stamp_engine_sha_writes_and_is_stable(tmp_path):
+    from orchestrator.langgraph.pipeline_graph import _stamp_engine_sha
+    from orchestrator.state_store.project_db import ProjectDB
+    _stamp_engine_sha(str(tmp_path))
+    db = ProjectDB(tmp_path)
+    assert db.get_setting("engine_sha") is not None
+    assert db.get_setting("engine_sha_changes") in (None, "[]")
+    _stamp_engine_sha(str(tmp_path))
+    assert db.get_setting("engine_sha_changes") in (None, "[]")
+
+
+def test_stamp_detects_mid_run_change(tmp_path):
+    from orchestrator.langgraph.pipeline_graph import _stamp_engine_sha
+    from orchestrator.state_store.project_db import ProjectDB
+    _stamp_engine_sha(str(tmp_path))
+    db = ProjectDB(tmp_path)
+    # simulate that the run STARTED under a different sha than the live one
+    db.set_setting("engine_sha", "deadbeefdead")
+    _stamp_engine_sha(str(tmp_path))
+    if engine_git_sha():
+        changes = json.loads(db.get_setting("engine_sha_changes", "[]") or "[]")
+        assert changes and changes[0]["from"] == "deadbeefdead"
+        assert db.get_setting("engine_sha") == engine_git_sha()
+
+
+def test_final_report_includes_engine_sha(tmp_path):
+    from orchestrator.state_store.project_db import open_project
+    db = open_project(tmp_path)
+    db.set_setting("engine_sha", "abc123abc123")
+    db.set_setting("engine_sha_changes", json.dumps([{"from": "x", "to": "abc123abc123"}]))
+    report = fr.build_final_report({}, str(tmp_path))
+    assert report["engine_sha"] == "abc123abc123"
+    assert report["engine_sha_changed_mid_run"] is True
+    md = fr.render_markdown(report)
+    assert "abc123abc123" in md and "CHANGED MID-RUN" in md
+
+
+# ---------------------------------------------------------------------------
+# Engine source carries no benchmark-exercise vocabulary (run3-followups #5)
+# ---------------------------------------------------------------------------
+#
+# Standing repo rule: engine source must be exercise-agnostic. Naming a specific
+# benchmark exercise (or a specific reference design's internals) in a comment
+# looks harmless and is not: it leaks the evaluation set into the engine, and it
+# teaches every later reader -- human and model -- that this file is allowed to
+# know which exercise it is running.
+#
+# Protocol-generic identifiers are FINE and deliberately not matched here: the
+# QSPI contract fields in ``bfm_lib`` describe a bus protocol, not an exercise,
+# and ``rasterise``/``TRIANGLES`` in the layout renderer are graphics primitives.
+# The guard is scoped to the files this sweep cleaned, so it pins the fix rather
+# than asserting a repo-wide invariant that other work would have to keep true.
+
+_EXERCISE_WORDS = ("raster", "triangle", "h264", "h.264", "cavlc")
+
+_SCRUBBED_FILES = (
+    "orchestrator/langgraph/bfm_lib/maxgeo.py",
+    "orchestrator/langgraph/bfm_lib/stimulus.py",
+    "orchestrator/langgraph/drc_verdict.py",
+    "orchestrator/langgraph/macro_prebind.py",
+    "orchestrator/langgraph/tapeout_helpers.py",
+    "orchestrator/langgraph/integration_helpers.py",
+    "orchestrator/langchain/agents/contract_audit_agent.py",
+    "orchestrator/langchain/agents/uarch_spec_generator.py",
+    "orchestrator/architecture/model_integration.py",
+)
+
+
+def _engine_root():
+    from pathlib import Path
+
+    import orchestrator
+    return Path(orchestrator.__file__).resolve().parent.parent
+

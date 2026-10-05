@@ -1,0 +1,14 @@
+# SiliconIA Docker build ignores
+.git
+**/.git
+**/__pycache__
+**/*.pyc
+**/node_modules
+**/.coresmith
+**/sim_build
+**/tb
+**/*.vcd
+**/*.fst
+silicon-runs/
+*.log
+.env

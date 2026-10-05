@@ -1,0 +1,203 @@
+# =============================================================================
+# SiliconIA Unified Dockerfile
+# Prompt → CoreSmith → OpenROAD-flow-scripts → Sky130 → OpenROAD GUI
+#
+# This Dockerfile builds a single container with:
+#   1. All EDA tools (Yosys, OpenROAD, Magic, Netgen, Verilator, KLayout)
+#   2. Sky130 PDK (standard cells + tech rules)
+#   3. CoreSmith orchestrator (Python + LangGraph)
+#   4. OpenROAD-flow-scripts (Makefile-based PnR flow)
+#   5. Codex CLI (LLM provider)
+#   6. The silicon_pipeline.py integration layer
+#
+# Build:
+#   docker build -t siliconia-pipeline:latest .
+#
+# Run (interactive):
+#   docker run --rm -it -v %cd%:/workspace siliconia-pipeline:latest
+# =============================================================================
+
+FROM ubuntu:22.04 AS base
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=America/Los_Angeles
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# ---- System Dependencies ----
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y \
+    build-essential git clang bison flex gawk m4 \
+    help2man gperf perl pkg-config wget curl ca-certificates \
+    libfl-dev libreadline-dev libncurses5-dev \
+    tcl tcl-dev tk tk-dev tcllib tclsh tcsh \
+    libffi-dev zlib1g-dev libboost-all-dev \
+    libx11-dev libxaw7-dev libxft-dev libxrender-dev libxext-dev \
+    libglu1-mesa-dev freeglut3-dev libgtk-3-dev \
+    qtbase5-dev qtchooser qt5-qmake qtbase5-dev-tools \
+    libqt5svg5-dev libqt5charts5-dev \
+    automake autoconf libtool libspdlog-dev libfmt-dev \
+    graphviz xdot python3 python3-pip python3-dev python3-venv python3-tk \
+    gsl-bin libgsl-dev cmake vim sudo \
+    libcairo2-dev libpcre2-dev dos2unix \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---- Node.js 20 (for Codex CLI) ----
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# ---- Codex CLI ----
+RUN npm install -g @openai/codex
+
+# ---- Python Dependencies ----
+RUN python3 -m pip install --upgrade pip && \
+    python3 -m pip install \
+    pyyaml jinja2 pydantic \
+    fastapi uvicorn httpx \
+    langgraph langgraph-checkpoint-sqlite \
+    opentelemetry-sdk opentelemetry-api \
+    cocotb cocotb-bus \
+    pytest pytest-cov pytest-asyncio \
+    amaranth gdstk pygltflib mapbox-earcut \
+    volare rich click watchdog \
+    'mcp>=1.0.0,<2'
+
+# =============================================================================
+# Stage: EDA Tools (from OSS-CAD-Suite or build from source)
+# =============================================================================
+FROM base AS eda-tools
+
+# ---- Yosys (latest stable) ----
+RUN cd /tmp && \
+    git clone https://github.com/YosysHQ/yosys.git && \
+    cd yosys && \
+    make config-gcc && \
+    make -j$(nproc) && \
+    make install && \
+    cd / && rm -rf /tmp/yosys
+
+# ---- Verilator 5.038+ ----
+RUN cd /tmp && \
+    git clone https://github.com/verilator/verilator.git && \
+    cd verilator && git checkout v5.038 && \
+    autoconf && ./configure && \
+    make -j$(nproc) && make install && \
+    cd / && rm -rf /tmp/verilator
+
+# ---- SWIG 4.3.0 ----
+RUN cd /tmp && \
+    wget https://github.com/swig/swig/archive/refs/tags/v4.3.0.tar.gz && \
+    tar -xzf v4.3.0.tar.gz && cd swig-4.3.0 && \
+    ./autogen.sh && ./configure && \
+    make -j$(nproc) && make install && \
+    cd / && rm -rf /tmp/swig*
+
+# ---- Boost 1.87 ----
+RUN cd /tmp && \
+    wget -O boost.tar.gz https://archives.boost.io/release/1.87.0/source/boost_1_87_0.tar.gz && \
+    tar -xzf boost.tar.gz && cd boost_1_87_0 && \
+    ./bootstrap.sh && ./b2 -j$(nproc) install && \
+    cd / && rm -rf /tmp/boost*
+
+# ---- Lemon Graph ----
+RUN cd /tmp && \
+    git clone https://github.com/The-OpenROAD-Project/lemon-graph.git && \
+    cd lemon-graph && mkdir build && cd build && \
+    cmake .. -DLEMON_ENABLE_ILOG=OFF -DLEMON_ENABLE_GLPK=OFF \
+             -DLEMON_ENABLE_COIN=OFF -DLEMON_ENABLE_SOPLEX=OFF && \
+    make -j$(nproc) && make install && \
+    cd / && rm -rf /tmp/lemon*
+
+# ---- OR-Tools v9.8 ----
+RUN cd /tmp && \
+    git clone https://github.com/google/or-tools.git && \
+    cd or-tools && git checkout v9.8 && \
+    mkdir build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release \
+             -DBUILD_SHARED_LIBS=ON \
+             -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_DEPS=ON && \
+    make -j4 && make install && \
+    cd / && rm -rf /tmp/or-tools
+
+# ---- OpenROAD (from local source copy) ----
+COPY OpenROAD-master /tmp/OpenROAD
+RUN cd /tmp/OpenROAD && \
+    git submodule update --init --recursive 2>/dev/null || true && \
+    mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release \
+             -DCMAKE_CXX_STANDARD=20 \
+             -DENABLE_TESTS=OFF \
+             -DSPDLOG_FMT_EXTERNAL=OFF \
+             -DFMT_EXTERNAL=OFF && \
+    make -j4 && make install && \
+    cd / && rm -rf /tmp/OpenROAD
+
+# ---- Magic VLSI ----
+RUN cd /tmp && \
+    git clone https://github.com/RTimothyEdwards/magic.git && \
+    cd magic && ./configure && \
+    make -j$(nproc) && make install && \
+    cd / && rm -rf /tmp/magic
+
+# ---- Netgen ----
+RUN apt-get update && apt-get install -y libnglib-dev netgen-headers && \
+    rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# Stage: Sky130 PDK
+# =============================================================================
+FROM eda-tools AS with-pdk
+
+# ---- Sky130 PDK via volare ----
+RUN python3 -m pip install volare && \
+    mkdir -p /usr/share/pdk && \
+    volare enable --pdk sky130 --pdk-root /usr/share/pdk \
+    $(volare ls-remote --pdk sky130 2>/dev/null | head -1 || echo "bdc9412b3e468c102d01b7cf6571571070d4f7a6")
+
+ENV PDK_ROOT=/usr/share/pdk
+ENV PDK=sky130A
+
+# =============================================================================
+# Final Stage: Integration
+# =============================================================================
+FROM with-pdk AS final
+
+# ---- Set up workspace ----
+WORKDIR /workspace
+
+# ---- Copy projects ----
+COPY coresmith-main /workspace/coresmith-main
+COPY OpenROAD-flow-scripts-master /workspace/OpenROAD-flow-scripts-master
+COPY pipeline_config.yaml /workspace/pipeline_config.yaml
+COPY silicon_pipeline.py /workspace/silicon_pipeline.py
+
+# ---- Install CoreSmith orchestrator ----
+RUN cd /workspace/coresmith-main && \
+    python3 -m pip install -r requirements.txt && \
+    python3 -m pip install -e orchestrator/ 2>/dev/null || true
+
+# ---- Environment Variables ----
+ENV CORESMITH_PROJECT_ROOT=/workspace/silicon-runs/current
+ENV CORESMITH_LLM_PROVIDER=codex
+ENV CORESMITH_CODEX_MODEL=gpt-5.6-sol
+ENV CORESMITH_MODEL=gpt-5.6-sol
+ENV CORESMITH_BLOCK_MODEL=gpt-5.6-sol
+ENV CORESMITH_CODEX_SANDBOX=danger-full-access
+ENV OPENROAD_EXE=/usr/local/bin/openroad
+ENV PATH="/workspace/coresmith-main/bin:${PATH}"
+ENV PYTHONPATH="/workspace/coresmith-main:${PYTHONPATH}"
+
+# ---- Create convenience scripts ----
+RUN mkdir -p /workspace/silicon-runs && \
+    echo '#!/bin/bash' > /usr/local/bin/silicon-pipeline && \
+    echo 'python3 /workspace/silicon_pipeline.py "$@"' >> /usr/local/bin/silicon-pipeline && \
+    chmod +x /usr/local/bin/silicon-pipeline
+
+# ---- Health check ----
+HEALTHCHECK --interval=30s --timeout=10s \
+  CMD openroad -version 2>/dev/null && yosys -V 2>/dev/null || exit 1
+
+EXPOSE 3000 8080
+
+ENTRYPOINT ["/bin/bash"]

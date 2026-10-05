@@ -1,0 +1,25 @@
+=== LINT LOG ===
+Timestamp: 2026-10-04T22:48:50
+Block: alu8
+Attempt: 1
+Command: verilator --lint-only -Wall -Wno-fatal -Wno-EOFNEWLINE /workspace/silicon-runs/una-20261004-152410/rtl/alu8/alu8.v
+Return code: 0
+
+=== STDOUT ===
+
+
+=== STDERR ===
+%Warning-UNUSED: /workspace/silicon-runs/una-20261004-152410/rtl/alu8/alu8.v:28:16: Bits of signal are not used: 'add9'[8]
+                                                                                  : ... In instance alu8
+   28 |     wire [8:0] add9;
+      |                ^~~~
+                 ... Use "/* verilator lint_off UNUSED */" and lint_on around source to disable this message.
+%Warning-UNUSED: /workspace/silicon-runs/una-20261004-152410/rtl/alu8/alu8.v:29:16: Bits of signal are not used: 'diff9'[8]
+                                                                                  : ... In instance alu8
+   29 |     wire [8:0] diff9;
+      |                ^~~~~
+%Warning-UNUSED: /workspace/silicon-runs/una-20261004-152410/rtl/alu8/alu8.v:37:16: Signal is not used: 'op_is_reserved'
+                                                                                  : ... In instance alu8
+   37 |     wire       op_is_reserved;
+      |                ^~~~~~~~~~~~~~
+

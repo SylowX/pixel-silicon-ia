@@ -1,0 +1,9 @@
+=== DV_SEED LOG ===
+Timestamp: 2026-10-05T02:42:32
+Block: counter16
+Attempt: 2
+Command: CORESMITH_DV_SEED 201118045920046516
+Return code: N/A (exception)
+
+=== ERROR ===
+per-run DV seed for counter16: 201118045920046516

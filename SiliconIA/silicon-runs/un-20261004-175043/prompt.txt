@@ -1,0 +1,1 @@
+Un multiplicador de 8x8 bits combinacional, con salida de 16 bits

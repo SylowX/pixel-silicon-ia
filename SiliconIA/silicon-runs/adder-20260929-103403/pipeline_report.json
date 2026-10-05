@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-09-29T10:34:49.796365",
+  "prompt": "adder smoke test",
+  "run_dir": "/workspace/silicon-runs/adder-20260929-103403",
+  "phases": {
+    "coresmith": {
+      "success": true,
+      "netlist": null,
+      "sdc": null,
+      "rtl_files": [
+        "/workspace/test_adder.v"
+      ],
+      "run_dir": "/workspace/silicon-runs/adder-20260929-103403"
+    },
+    "orfs": {
+      "success": true,
+      "design_name": "adder32",
+      "flow_results": {
+        "synth": {
+          "success": true
+        },
+        "floorplan": {
+          "success": true
+        },
+        "place": {
+          "success": true
+        },
+        "cts": {
+          "success": true
+        },
+        "route": {
+          "success": true
+        },
+        "finish": {
+          "success": true
+        }
+      },
+      "outputs": {
+        "odb_final": "/workspace/silicon-runs/adder-20260929-103403/outputs/6_final.odb",
+        "gds": "/workspace/silicon-runs/adder-20260929-103403/outputs/6_final.gds",
+        "def_final": "/workspace/silicon-runs/adder-20260929-103403/outputs/6_final.def",
+        "netlist": "/workspace/silicon-runs/adder-20260929-103403/outputs/6_final.v",
+        "sdc_final": "/workspace/silicon-runs/adder-20260929-103403/outputs/6_final.sdc",
+        "odb_route": "/workspace/silicon-runs/adder-20260929-103403/outputs/5_route.odb",
+        "odb_place": "/workspace/silicon-runs/adder-20260929-103403/outputs/3_place.odb",
+        "odb_floorplan": "/workspace/silicon-runs/adder-20260929-103403/outputs/2_floorplan.odb",
+        "odb_synth": "/workspace/silicon-runs/adder-20260929-103403/outputs/1_synth.odb",
+        "floorplan_log": "/workspace/silicon-runs/adder-20260929-103403/outputs/2_1_floorplan.log",
+        "place_log": "/workspace/silicon-runs/adder-20260929-103403/outputs/3_5_place_dp.log",
+        "cts_log": "/workspace/silicon-runs/adder-20260929-103403/outputs/4_1_cts.log",
+        "route_log": "/workspace/silicon-runs/adder-20260929-103403/outputs/5_2_route.log",
+        "final_report": "/workspace/silicon-runs/adder-20260929-103403/outputs/6_report.log"
+      },
+      "config_mk": "/OpenROAD-flow-scripts/flow/designs/sky130hd/adder32/config.mk"
+    },
+    "pdk": {
+      "success": true,
+      "checks": {
+        "PDK platform directory": {
+          "path": "/OpenROAD-flow-scripts/flow/platforms/sky130hd",
+          "exists": true
+        },
+        "Liberty file": {
+          "path": "/OpenROAD-flow-scripts/flow/platforms/sky130hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib",
+          "exists": true
+        },
+        "LEF file": {
+          "path": "/OpenROAD-flow-scripts/flow/platforms/sky130hd/lef/sky130_fd_sc_hd_merged.lef",
+          "exists": true
+        },
+        "Tech LEF": {
+          "path": "/OpenROAD-flow-scripts/flow/platforms/sky130hd/lef/sky130_fd_sc_hd.tlef",
+          "exists": true
+        }
+      }
+    }
+  }
+}

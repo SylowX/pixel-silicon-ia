@@ -1,0 +1,15 @@
+=== SIMULATE LOG ===
+Timestamp: 2026-10-05T02:42:36
+Block: counter16
+Attempt: 2
+Command: /usr/bin/make -C /workspace/silicon-runs/quiero-20261004-192003/sim_build/counter16
+Return code: 2
+
+=== STDOUT ===
+make: Entering directory '/workspace/silicon-runs/quiero-20261004-192003/sim_build/counter16'
+make: Leaving directory '/workspace/silicon-runs/quiero-20261004-192003/sim_build/counter16'
+
+
+=== STDERR ===
+/usr/local/lib/python3.10/dist-packages/cocotb_tools/makefiles/simulators/Makefile.verilator:29: *** cocotb requires Verilator 5.036 or later, but using 4.038.  Stop.
+

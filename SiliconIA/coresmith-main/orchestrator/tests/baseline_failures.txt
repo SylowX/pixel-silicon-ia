@@ -1,0 +1,4 @@
+# CoreSmith test-suite failure baseline (Arm E).
+#
+# Tests that fail without a local Sky130 PDK checkout. Everything else is green.
+orchestrator/tests/test_backend_helpers.py::TestToolResolution::test_pdk_files_exist

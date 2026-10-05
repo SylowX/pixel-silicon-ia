@@ -1,0 +1,58 @@
+# coresmith -- AI-orchestrated ASIC pipeline
+# Core dependencies
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-asyncio>=0.23.0
+
+# Orchestrator -- LangGraph pipeline
+# (LangChain itself is not used; agents shell out to the Claude CLI via
+# orchestrator/langchain/agents/coresmith_llm.py. langgraph pulls in
+# langchain-core transitively.)
+langgraph>=0.4.0
+langgraph-checkpoint-sqlite>=2.0.0
+
+# Orchestrator -- telemetry
+opentelemetry-sdk>=1.20.0
+opentelemetry-api>=1.20.0
+
+# Orchestrator -- config & templating
+pyyaml>=6.0
+jinja2>=3.1.0
+pydantic>=2.0.0
+
+# Orchestrator -- MCP server
+# Capped below 2.0: mcp 2.x removed `mcp.server.fastmcp`, which
+# orchestrator/mcp_server.py imports at module scope, so an unpinned install
+# resolves to a version where the MCP server cannot even be imported (and
+# every test in tests/test_mcp_server.py errors at collection).
+# requirements-lock.txt pins the validated 1.27.0.
+mcp>=1.0.0,<2
+
+# Orchestrator -- coresmithd HTTP daemon (orchestrator/daemon/server.py)
+fastapi>=0.115.0
+uvicorn>=0.30.0
+httpx>=0.27.0
+
+# Orchestrator -- 3D GDS layout viewer
+gdstk>=0.9.0
+pygltflib>=1.16.0
+mapbox-earcut>=1.0.0
+
+# Cocotb (RTL simulation)
+cocotb>=2.0
+cocotb-bus>=0.3.0
+wavekit>=0.5.6
+
+# Security floors for transitive deps (GitHub Dependabot 2026-05)
+# Pulled in transitively (langsmith via langgraph; idna via httpx/requests);
+# pin minimum patched versions so the vulnerable ranges can't be resolved.
+idna>=3.15        # DoS in idna (< 3.15)
+langsmith>=0.8.0  # advisory: < 0.8.0
+
+# Amaranth -- block-model + composition methodology (CORESMITH_BLOCK_GOLDENS).
+# Per-block reference models and the integrated chip model are Elaboratables;
+# pysim carries their real clock/handshake/latency semantics and the gate
+# compares the composed output bit-exactly with the software reference.
+amaranth>=0.5,<0.6

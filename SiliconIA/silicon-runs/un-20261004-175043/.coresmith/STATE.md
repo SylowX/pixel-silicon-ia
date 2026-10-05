@@ -1,0 +1,1 @@
+The project state is project.sqlite. The JSON files next to it and under blocks/<block>/ are read-only views regenerated from the database on every write; use the CLI (`coresmith blocks|block|contracts|attempts|constraints|results|settings`) or the pipeline to change state. LLM-authored drafts of the architecture documents are written to drafts/ and imported.

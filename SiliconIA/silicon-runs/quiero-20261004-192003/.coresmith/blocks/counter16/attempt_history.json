@@ -1,0 +1,14 @@
+[
+  {
+    "phase": "sim",
+    "attempt": 1,
+    "error": "make: Entering directory '/workspace/silicon-runs/quiero-20261004-192003/sim_build/counter16'\nmake: Leaving directory '/workspace/silicon-runs/quiero-20261004-192003/sim_build/counter16'\n\n/usr/local/lib/python3.10/dist-packages/cocotb_tools/makefiles/simulators/Makefile.verilator:29: *** cocotb requires Verilator 5.036 or later, but using 4.038.  Stop.\n",
+    "category": "AGENT_ERROR"
+  },
+  {
+    "phase": "sim",
+    "attempt": 2,
+    "error": "make: Entering directory '/workspace/silicon-runs/quiero-20261004-192003/sim_build/counter16'\nmake: Leaving directory '/workspace/silicon-runs/quiero-20261004-192003/sim_build/counter16'\n\n/usr/local/lib/python3.10/dist-packages/cocotb_tools/makefiles/simulators/Makefile.verilator:29: *** cocotb requires Verilator 5.036 or later, but using 4.038.  Stop.\n",
+    "category": "INFRASTRUCTURE_ERROR"
+  }
+]

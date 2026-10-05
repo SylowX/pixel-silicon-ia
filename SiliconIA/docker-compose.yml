@@ -1,0 +1,65 @@
+# =============================================================================
+# SiliconIA Docker Compose
+# Manages the unified EDA + CoreSmith + OpenROAD pipeline container
+# =============================================================================
+
+services:
+  siliconia:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: siliconia-pipeline:latest
+    container_name: siliconia
+    stdin_open: true
+    tty: true
+
+    # --- Volumes ---
+    volumes:
+      # Mount the workspace (all projects)
+      - .:/workspace
+      # Persist run outputs
+      - ./silicon-runs:/workspace/silicon-runs
+      # Codex CLI credentials (Windows host)
+      - ${USERPROFILE}/.codex:/root/.codex
+      # X11 socket for GUI (WSL2)
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+    # --- Environment ---
+    environment:
+      # LLM Provider
+      - CORESMITH_LLM_PROVIDER=codex
+      - CORESMITH_CODEX_MODEL=gpt-5.6-sol
+      - CORESMITH_MODEL=gpt-5.6-sol
+      - CORESMITH_BLOCK_MODEL=gpt-5.6-sol
+      - CORESMITH_CODEX_SANDBOX=danger-full-access
+      # PDK
+      - PDK_ROOT=/usr/share/pdk
+      - PDK=sky130A
+      # OpenROAD
+      - OPENROAD_EXE=/usr/local/bin/openroad
+      # Paths
+      - CORESMITH_PROJECT_ROOT=/workspace/silicon-runs/current
+      - PYTHONPATH=/workspace/coresmith-main
+      # X11 for GUI
+      - DISPLAY=${DISPLAY:-:0}
+      # Codex API key (set in .env file or host environment)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - CODEX_API_KEY=${CODEX_API_KEY:-}
+
+    # --- Ports ---
+    ports:
+      # CoreSmith daemon API (host:container)
+      - "8085:8080"
+      # CoreSmith WebView (host:container)
+      - "3005:3000"
+
+    # --- Working directory ---
+    working_dir: /workspace
+
+    # --- Resource limits ---
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 8G

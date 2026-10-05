@@ -1,0 +1,207 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+#
+# Nightly end-to-end smoke test:
+#   1. Build the Dockerfile (catches Yosys / Verilator / OpenROAD / cocotb
+#      upstream breakage and Sky130 PDK URL rot)
+#   2. Run `make preflight` inside the container to verify the toolchain
+#   3. Run `make demo` (the 8-bit adder reference design) end-to-end:
+#      RTL gen -> lint -> testbench -> sim -> synthesis
+#
+# Requires the CLAUDE_CODE_OAUTH_TOKEN repo secret. If it's not configured
+# the LLM steps are skipped and only the toolchain build is exercised --
+# we still catch most upstream breakage that way.
+
+name: Nightly E2E
+
+on:
+  schedule:
+    # 07:00 UTC daily -- after most upstream nightlies have published.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    # Allow manual runs from the Actions tab for debugging.
+
+jobs:
+  docker-build:
+    name: Build container
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # ubuntu-latest gives ~14 GB free; the openlane2 base (~4 GB extracted)
+      # + nix-channel update + Sky130 PDK (~2 GB) already push past that, and
+      # `load: true` materialises the whole ~15 GB image a *second* time when
+      # the docker daemon imports the buildx tarball. Without this the export
+      # dies with
+      #   #28 importing to docker
+      #   ERROR: write /blobs/sha256/...: no space left on device
+      # publish-image.yml and test-mcu3.yml already carry this step; it was
+      # simply never added here. Frees ~25 GB up front.
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android \
+                      /opt/hostedtoolcache/CodeQL || true
+          sudo docker system prune -af || true
+          df -h /
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # No `cache-from`/`cache-to: type=gha` here, deliberately:
+      #   1. Nothing has ever populated that cache -- the build has failed
+      #      before the export step on every scheduled run -- so every
+      #      `cache-from` was already a cold miss.
+      #   2. This job exists to catch *upstream* rot (base image, nix
+      #      channels, PyPI, Sky130 PDK URLs -- see the header comment). A
+      #      warm layer cache would replay yesterday's layers and hide
+      #      exactly the breakage the nightly is supposed to find.
+      #   3. `mode=max` on a ~15 GB image cannot fit GitHub's 10 GB per-repo
+      #      cache budget anyway; it would thrash and evict.
+      # A cold build measures ~6 min, so there is nothing to buy back.
+      - name: Build coresmith image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          tags: coresmith:nightly
+          load: true
+
+      # CORESMITH_ALLOW_NO_OPENRAM=1 is the documented opt-out from the
+      # "no OpenRAM, no greenlight" preflight gate in
+      # orchestrator/langgraph/pipeline_helpers.py, and it is legitimate
+      # here: the only design this workflow drives is adder8, an 8-bit
+      # combinational adder with provably no memories, so no generated SRAM
+      # macro can ever be required. The image does not ship OpenRAM, so
+      # without this the toolchain smoke test can never pass -- it would
+      # fail on a capability the nightly does not exercise. Everything the
+      # nightly *does* care about (yosys, OpenROAD, magic, netgen,
+      # verilator, cocotb, the Sky130 PDK) is still checked, and the gate
+      # still fires for every real design.
+      - name: Preflight check inside container
+        run: |
+          docker run --rm -e CORESMITH_ALLOW_NO_OPENRAM=1 \
+              coresmith:nightly bash -lc 'cd /coresmith && make preflight'
+
+  stage-fixtures:
+    name: Stage fixtures (strict)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Package C, C6: re-run the T1 stage-fixture gate in STRICT mode so a
+    # checkpoint that has drifted out of schema sync (topology/state/langgraph
+    # change) hard-fails the nightly instead of silently skipping like it does
+    # on PRs. No Docker / EDA / live LLM needed -- pure Python.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Node + Claude CLI
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
+          sudo apt-get install -y nodejs
+          sudo npm install -g @anthropic-ai/claude-code
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e "orchestrator[dev]"
+
+      - name: Stage-fixture gate (strict -- fail on schema drift)
+        env:
+          CORESMITH_STAGE_STRICT: "1"
+        run: pytest orchestrator/tests/ -v -m stage_fixture
+
+  e2e-demo:
+    name: Run make demo on adder8
+    runs-on: ubuntu-latest
+    needs: docker-build
+    timeout-minutes: 30
+    # Skip the LLM-driven leg if the auth secret isn't configured -- avoids
+    # noisy red CI on forks that haven't wired up a token.
+    if: ${{ github.repository == 'facebookexperimental/coresmith' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same headroom problem as docker-build: `load: true` needs room for
+      # the image twice over. See the comment on that job's copy of this step.
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android \
+                      /opt/hostedtoolcache/CodeQL || true
+          sudo docker system prune -af || true
+          df -h /
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # `cache-from: type=gha` is gone for the same reason as in
+      # docker-build: nothing populates that cache, so this was already a
+      # cold rebuild in practice -- the step name now says so.
+      - name: Rebuild coresmith image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          tags: coresmith:nightly
+          load: true
+
+      - name: Check secret presence
+        id: have_token
+        run: |
+          if [ -n "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run adder8 canary (headless auto-approver)
+        # Package C, C6: drive the smallest real design end-to-end with NO human
+        # in the loop -- nightly_canary.py polls `coresmith state` and resumes
+        # every interrupt with a safe default action, then snapshots a post-rtl
+        # stage fixture. This is the refresh source for the in-repo stage/replay
+        # fixtures (the uploaded llm_calls.jsonl + stage snapshot below).
+        if: steps.have_token.outputs.present == 'true'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          docker run --rm \
+              -e CLAUDE_CODE_OAUTH_TOKEN \
+              -e CORESMITH_MODEL=sonnet-5 \
+              -e CORESMITH_PROFILE=strict \
+              -e CORESMITH_ALLOW_NO_OPENRAM=1 \
+              -v "${{ github.workspace }}/.coresmith:/coresmith/.coresmith" \
+              coresmith:nightly bash -lc 'cd /coresmith && \
+                python3 scripts/nightly_canary.py \
+                  --project-root /coresmith \
+                  --blocks-file examples/adder8/blocks.yaml \
+                  --timeout-s 1500'
+
+      - name: Skip note (no token)
+        if: steps.have_token.outputs.present != 'true'
+        run: |
+          echo "::notice::CLAUDE_CODE_OAUTH_TOKEN not configured; skipping LLM-driven demo leg."
+          echo "The Docker build + preflight check still ran in the docker-build job."
+
+      - name: Upload pipeline artifacts
+        if: always() && steps.have_token.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-results-${{ github.run_id }}
+          path: |
+            .coresmith/pipeline_results.json
+            .coresmith/pipeline_events.jsonl
+            .coresmith/llm_calls.jsonl
+            .coresmith/traces.db
+            .coresmith/stage_snapshot_post_rtl/
+            rtl/adder8/
+            syn/output/adder8/
+          if-no-files-found: ignore
+          retention-days: 14

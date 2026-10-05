@@ -1,0 +1,41 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Next.js & Build
+/.next/
+/out/
+/build
+*.tsbuildinfo
+next-env.d.ts
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+SiliconIA/.launcher-logs/
+
+# Local Environment Variables
+.env
+.env*.local
+!.env.example
+SiliconIA/.env
+!SiliconIA/.env.example
+
+# OS & System
+.DS_Store
+Thumbs.db
+
+# SiliconIA runtime artifacts
+SiliconIA/silicon-runs/current
+SiliconIA/**/__pycache__/
+SiliconIA/**/*.pyc
+SiliconIA/**/sim_build/
+SiliconIA/**/tb/
+SiliconIA/**/*.vcd
+SiliconIA/**/*.fst
+
+# Upstream large EDA source trees (pre-compiled inside the openroad/orfs Docker container)
+SiliconIA/OpenROAD-master/
+SiliconIA/OpenROAD-flow-scripts-master/

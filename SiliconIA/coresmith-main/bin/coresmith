@@ -1,0 +1,662 @@
+#!/usr/bin/env python3
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+"""coresmith -- CLI client for the coresmithd daemon.
+
+Replaces the old ``run_pipeline.py`` headless driver. Cron-fired agents
+(and humans) use this to start the daemon, inspect run state, and resume
+the pipeline after each interrupt.
+
+The CLI auto-discovers the daemon for a given project_root by reading
+``<project_root>/.coresmith/daemon.json``. Specify the project root via
+``--project-root`` or ``CORESMITH_PROJECT_ROOT`` env var.
+
+Usage examples::
+
+    coresmith daemon start --project-root /tmp/myrun
+    coresmith run start --blocks-file blocks.yaml
+    coresmith state
+    coresmith resume --action approve
+    coresmith daemon stop
+
+Common decision actions for ``resume``:
+    approve     -- accept a uarch_spec_review / uarch_integration_review
+    retry       -- retry a block that failed (debug_classifier interrupts)
+    skip        -- skip a block whose attempts are exhausted
+    abort       -- stop the run
+    feedback    -- send feedback text back to the agent (architecture)
+    fix_rtl     -- you edited RTL on disk; re-run the failed stage
+    fix_tb      -- you edited TB on disk; re-run the failed stage
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Optional
+
+# Re-exec into the repo venv if we are not already running under it, so
+# httpx + the orchestrator deps resolve without forcing every caller to
+# `source venv/bin/activate` first. We detect "already in venv" by sys.prefix.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_VENV_DIR = _REPO_ROOT / "venv"
+_VENV_PY = _VENV_DIR / "bin" / "python"
+if (
+    _VENV_PY.exists()
+    and not Path(sys.prefix).resolve().samefile(_VENV_DIR.resolve())
+):
+    os.execv(str(_VENV_PY), [str(_VENV_PY), str(Path(__file__).resolve()), *sys.argv[1:]])
+
+import httpx
+
+# The run's persisted env (``.coresmith/env``) loader, shared with the daemon so
+# both apply the SAME semantics (the persisted file wins over ambient values).
+# Stdlib-only, so importing it costs nothing; a CLI copied away from the repo
+# still drives a remote daemon, hence the guard rather than a hard import.
+try:
+    if str(_REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(_REPO_ROOT))
+    from orchestrator import run_env as _run_env
+except ImportError:  # pragma: no cover -- CLI without the engine package
+    _run_env = None
+
+
+# ---------------------------------------------------------------------------
+# Daemon discovery
+# ---------------------------------------------------------------------------
+
+def _project_root(arg: Optional[str]) -> Path:
+    pr = arg or os.environ.get("CORESMITH_PROJECT_ROOT")
+    if not pr:
+        sys.exit(
+            "error: pass --project-root or set CORESMITH_PROJECT_ROOT.\n"
+            "       the daemon is per-run (per project_root)."
+        )
+    return Path(pr).resolve()
+
+
+def _daemon_file(project_root: Path) -> Path:
+    return project_root / ".coresmith" / "daemon.json"
+
+
+def _daemon_info(project_root: Path) -> dict:
+    df = _daemon_file(project_root)
+    if not df.exists():
+        sys.exit(
+            f"error: no daemon for {project_root}\n"
+            f"       run: coresmith daemon start --project-root {project_root}"
+        )
+    return json.loads(df.read_text())
+
+
+def _daemon_url(project_root: Path) -> str:
+    info = _daemon_info(project_root)
+    return f"http://127.0.0.1:{info['port']}"
+
+
+def _alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# HTTP helpers
+# ---------------------------------------------------------------------------
+
+def _get(project_root: Path, path: str) -> dict:
+    url = _daemon_url(project_root) + path
+    try:
+        r = httpx.get(url, timeout=30)
+    except httpx.HTTPError as e:
+        sys.exit(f"error: GET {url} -- {e}")
+    if r.status_code >= 400:
+        sys.exit(f"error: GET {url} -> {r.status_code}\n{r.text}")
+    return r.json()
+
+
+def _post(project_root: Path, path: str, body: dict) -> dict:
+    url = _daemon_url(project_root) + path
+    try:
+        r = httpx.post(url, json=body, timeout=60)
+    except httpx.HTTPError as e:
+        sys.exit(f"error: POST {url} -- {e}")
+    if r.status_code >= 400:
+        sys.exit(f"error: POST {url} -> {r.status_code}\n{r.text}")
+    return r.json()
+
+
+# ---------------------------------------------------------------------------
+# Subcommands: daemon
+# ---------------------------------------------------------------------------
+
+def _daemon_start(args):
+    project_root = _project_root(args.project_root)
+    project_root.mkdir(parents=True, exist_ok=True)
+    (project_root / ".coresmith").mkdir(exist_ok=True)
+
+    df = _daemon_file(project_root)
+    if df.exists():
+        try:
+            info = json.loads(df.read_text())
+            if _alive(info.get("pid", 0)):
+                print(f"daemon already running pid={info['pid']} port={info['port']}")
+                return
+        except Exception:
+            pass
+        df.unlink(missing_ok=True)
+
+    env = os.environ.copy()
+    env["CORESMITH_PROJECT_ROOT"] = str(project_root)
+
+    # Load the sticky env vars the operator persisted at run-start time. Lets a
+    # daemon restart pick up CORESMITH_LLM_PROVIDER, model overrides,
+    # CORESMITH_SKIP_SYNTH, CORESMITH_REFERENCE_ENTRY, etc. without re-sourcing
+    # launch.sh each time. Format: one "KEY=VALUE" per line, "#" lines ignored.
+    #
+    # The file is the run's FROZEN config, so for the keys it contains it is
+    # AUTHORITATIVE: it ASSIGNS rather than setdefault()s. Under setdefault a
+    # stale value already exported in the daemon-launching shell won silently --
+    # observed live with a persisted CORESMITH_REFERENCE_ENTRY=oracle while the
+    # composition gate ran the ambient `run`. Every ambient value we replace is
+    # printed so the operator sees the swap instead of inferring it from gate
+    # behaviour.
+    env_file = project_root / ".coresmith" / "env"
+    persisted: dict = {}
+    if _run_env is not None:
+        persisted = _run_env.load_persisted_env(project_root)
+        notice = _run_env.format_override_notice(
+            _run_env.apply_persisted_env(project_root, env)
+        )
+        if notice:
+            print(notice)
+    elif env_file.exists():
+        sys.exit(
+            f"error: {env_file} exists but orchestrator.run_env is not "
+            f"importable from {_REPO_ROOT} -- refusing to launch a daemon with "
+            "the run's persisted env unapplied"
+        )
+
+    # PATH is special: the persisted file records the launch PATH under
+    # CORESMITH_SAVED_PATH, never as a bare PATH= line (assigning a whole PATH
+    # would clobber the caller's), so applying the file above does not bring
+    # toolchain dirs from the run's LAUNCH env back -- they were silently lost
+    # on a bare-shell restart, observed as cocotb picking
+    # system Verilator 5.020 over oss-cad-suite's 5.051 and failing its >=5.036
+    # requirement. The launch PATH is persisted under CORESMITH_SAVED_PATH (see
+    # the persist block below); on restart, PREPEND any of its entries missing
+    # from the current PATH (prepend, not append, so the launch toolchain wins
+    # over same-named system tools -- exactly what sourcing run_env.sh did).
+    # The venv/repo-bin injections below still land in front of everything.
+    _saved_path = env.get("CORESMITH_SAVED_PATH", "").strip()
+    if _saved_path:
+        _cur_parts = [p for p in env.get("PATH", "").split(os.pathsep) if p]
+        _missing = [p for p in _saved_path.split(os.pathsep)
+                    if p and p not in _cur_parts]
+        if _missing:
+            env["PATH"] = os.pathsep.join(_missing + _cur_parts)
+            print(f"restored {len(_missing)} launch-env PATH entr"
+                  f"{'y' if len(_missing) == 1 else 'ies'} from "
+                  f"CORESMITH_SAVED_PATH")
+
+    # Auto-persist the run's WORKER SELECTORS so a later restart is self-
+    # sufficient. Footgun this closes: a `daemon start` that did NOT re-source
+    # the run's launch env instantiated the WRONG LLM (e.g. ClaudeLLM instead of
+    # the pinned codex/gpt-5.6-sol worker) -- silently swapping the model mid-
+    # run. We snapshot the effective non-secret provider/model selectors from
+    # the ambient env into .coresmith/env when present-and-not-already-recorded,
+    # so every subsequent restart reconstructs the same worker without the
+    # operator having to re-source anything. SECRETS (api keys / tokens) are
+    # deliberately NOT persisted -- they stay in the ambient env / keyring.
+    _persist_keys = (
+        "CORESMITH_LLM_PROVIDER", "CORESMITH_CODEX_MODEL", "CORESMITH_MODEL",
+        "CODEX_CLI_PATH", "CODEX_HOME",
+        "CORESMITH_CODEX_REASONING_EFFORT", "CORESMITH_CODEX_REASONING_EFFORT_ARCH",
+    )
+    try:
+        _recorded = set(persisted)
+        _to_add = []
+        for k in _persist_keys:
+            v = os.environ.get(k)
+            if v and k not in _recorded:
+                if any(tok in k for tok in ("KEY", "TOKEN", "SECRET", "PASSWORD")):
+                    continue  # never persist secrets
+                _to_add.append(f"{k}={v}")
+        # Snapshot the launch PATH once (first properly-sourced start) so later
+        # bare-shell restarts can restore the run's toolchain dirs (see the
+        # CORESMITH_SAVED_PATH merge above). Recorded once, never overwritten.
+        if "CORESMITH_SAVED_PATH" not in _recorded and os.environ.get("PATH"):
+            _to_add.append(f"CORESMITH_SAVED_PATH={os.environ['PATH']}")
+        if _to_add:
+            env_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(env_file, "a", encoding="utf-8") as _ef:
+                if _recorded:
+                    _ef.write("\n")
+                _ef.write("# auto-persisted worker selectors (restart-safe)\n")
+                _ef.write("\n".join(_to_add) + "\n")
+            print(f"persisted worker selectors to {env_file}: "
+                  f"{[a.split('=',1)[0] for a in _to_add]}")
+    except Exception as e:  # noqa: BLE001 -- persistence is best-effort
+        print(f"note: worker-selector persist skipped: {e}")
+
+    log_path = project_root / ".coresmith" / "daemon.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Spawn detached. The daemon writes daemon.json on startup; poll for it.
+    repo_root = Path(__file__).resolve().parent.parent
+    python = repo_root / "venv" / "bin" / "python"
+    if not python.exists():
+        python = Path(sys.executable)
+
+    # Inject the repo venv onto PATH so subprocesses spawned by the daemon
+    # (cocotb-config, verilator wrappers, etc.) resolve to the same toolchain
+    # the venv was provisioned with, regardless of the caller's PATH.
+    venv_bin = repo_root / "venv" / "bin"
+    if venv_bin.is_dir():
+        env["PATH"] = f"{venv_bin}:{env.get('PATH', '')}"
+        env["VIRTUAL_ENV"] = str(repo_root / "venv")
+
+    # B3: prepend the repo bin/ so every agent the daemon spawns resolves the
+    # `coresmith` verify-as-tool CLI on PATH (agents inherit the daemon env).
+    repo_bin = repo_root / "bin"
+    if repo_bin.is_dir():
+        env["PATH"] = f"{repo_bin}:{env.get('PATH', '')}"
+
+    # Defect 1 (rung1): codex runs agent commands via `/bin/bash -lc`, where
+    # /etc/profile unconditionally reassigns PATH and drops the repo bin/ prefix
+    # injected above (RTL agents hit `coresmith verify ... -> exit 127`). Export
+    # an ABSOLUTE handle to the CLI so agents can invoke `"$CORESMITH_CLI"
+    # <subcommand>` (falling back to plain `coresmith` if unset) regardless of
+    # what /etc/profile does to PATH. Agents inherit this daemon env.
+    cli_path = repo_bin / "coresmith"
+    if cli_path.exists():
+        env["CORESMITH_CLI"] = str(cli_path)
+        # Belt-and-suspenders: also refresh a /usr/local/bin/coresmith symlink so
+        # a bare `coresmith` resolves even in a profile-reset shell. Best-effort;
+        # never fatal (no-op if the dir is unwritable or holds a real file).
+        try:
+            sys.path.insert(0, str(repo_root))
+            from orchestrator.harness.env import ensure_cli_symlink
+            if ensure_cli_symlink(cli_path) is None:
+                print(
+                    "note: /usr/local/bin/coresmith symlink not refreshed "
+                    "(agents use $CORESMITH_CLI or the repo bin/ on PATH)"
+                )
+        except Exception as e:  # noqa: BLE001 -- symlink is optional
+            print(f"note: coresmith symlink refresh skipped: {e}")
+
+    # cocotb 2.x requires PYTHONHOME so the Verilator-embedded Python
+    # interpreter can find pygpi (a separate package introduced in
+    # cocotb 2.0). Without it, every sim invocation fails with
+    # ``ModuleNotFoundError: No module named 'pygpi'`` even though the
+    # module is on disk next to cocotb itself. We auto-detect the required
+    # value -- from the interpreter we are about to SPAWN, not from the one
+    # running this script, since they are usually different (system python
+    # here, repo venv python there) -- and inject it. The operator may
+    # override by setting PYTHONHOME explicitly in the environment or in
+    # .coresmith/env. resolve_pythonhome() returns None rather than a prefix
+    # with no stdlib: injecting one of those kills the daemon at startup
+    # ("No module named 'encodings'"), which is worse than not setting it.
+    if "PYTHONHOME" not in env:
+        try:
+            sys.path.insert(0, str(repo_root))
+            from orchestrator.harness.env import resolve_pythonhome
+            pythonhome = resolve_pythonhome(python)
+            if pythonhome:
+                env["PYTHONHOME"] = pythonhome
+            else:
+                print(
+                    "note: PYTHONHOME not injected -- no interpreter prefix with "
+                    "a stdlib found. cocotb sims may fail with 'No module named "
+                    "pygpi'; set PYTHONHOME explicitly if they do."
+                )
+        except Exception as e:  # noqa: BLE001 -- auto-detect is best-effort
+            print(f"note: PYTHONHOME auto-detect skipped: {e}")
+
+    with open(log_path, "ab") as logf:
+        proc = subprocess.Popen(
+            [str(python), "-m", "orchestrator.daemon.server", "--port", str(args.port or 0)],
+            cwd=str(repo_root),
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=logf,
+            stderr=logf,
+            start_new_session=True,
+        )
+
+    for _ in range(50):
+        if df.exists():
+            info = json.loads(df.read_text())
+            print(f"daemon started pid={info['pid']} port={info['port']}")
+            print(f"log: {log_path}")
+            return
+        if proc.poll() is not None:
+            sys.exit(
+                f"error: daemon exited with code {proc.returncode}\n"
+                f"see {log_path}"
+            )
+        time.sleep(0.2)
+
+    sys.exit(
+        f"error: daemon did not write {df} within 10s -- check {log_path}"
+    )
+
+
+def _daemon_stop(args):
+    project_root = _project_root(args.project_root)
+    df = _daemon_file(project_root)
+    if not df.exists():
+        print(f"no daemon for {project_root}")
+        return
+    info = json.loads(df.read_text())
+    pid = info.get("pid", 0)
+    if pid and _alive(pid):
+        try:
+            os.kill(pid, 15)  # SIGTERM
+            print(f"sent SIGTERM to pid={pid}")
+        except OSError as e:
+            print(f"warning: could not signal pid={pid}: {e}")
+    else:
+        df.unlink(missing_ok=True)
+        print("stale daemon file removed")
+
+
+def _daemon_status(args):
+    project_root = _project_root(args.project_root)
+    df = _daemon_file(project_root)
+    if not df.exists():
+        print(f"no daemon for {project_root}")
+        return
+    info = json.loads(df.read_text())
+    alive = _alive(info.get("pid", 0))
+    print(json.dumps({**info, "alive": alive}, indent=2))
+
+
+# ---------------------------------------------------------------------------
+# Subcommands: run
+# ---------------------------------------------------------------------------
+
+def _run_start(args):
+    project_root = _project_root(args.project_root)
+    body = {
+        "max_attempts": args.max_attempts,
+        "target_clock_mhz": args.target_clock_mhz,
+        "blocks_file": args.blocks_file or "",
+        "force": bool(getattr(args, "force", False)),
+    }
+    response = _post(project_root, "/run/start", body)
+    for w in response.get("warnings", []) or []:
+        print(f"warning: {w}", file=sys.stderr)
+    print(json.dumps(response, indent=2))
+
+
+def _run_pause(args):
+    project_root = _project_root(args.project_root)
+    print(json.dumps(_post(project_root, "/run/pause", {}), indent=2))
+
+
+def _run_restart_node(args):
+    project_root = _project_root(args.project_root)
+    print(json.dumps(
+        _post(project_root, "/run/restart-node",
+              {"node": args.node,
+               "refresh_sidecars": bool(getattr(args, "refresh_sidecars", False))}),
+        indent=2))
+
+
+def _run_state(args):
+    project_root = _project_root(args.project_root)
+    print(json.dumps(_get(project_root, "/run/state"), indent=2))
+
+
+def _run_resume(args):
+    project_root = _project_root(args.project_root)
+    body = {
+        "action": args.action,
+        "feedback": args.feedback or "",
+        "rtl_fix_description": args.rtl_fix_description or "",
+        "rationale": args.rationale or "",
+        "block_actions": json.loads(args.block_actions) if args.block_actions else None,
+    }
+    print(json.dumps(_post(project_root, "/run/resume", body), indent=2))
+
+
+def _run_logs(args):
+    project_root = _project_root(args.project_root)
+    path = project_root / ".coresmith" / "pipeline_events.jsonl"
+    if not path.exists():
+        sys.exit(f"no events at {path}")
+    n = args.tail
+    lines = path.read_text().splitlines()[-n:]
+    for line in lines:
+        print(line)
+
+
+# ---------------------------------------------------------------------------
+# Subcommands: architecture (PRD -> SAD -> FRD -> ERS -> block_diagram ->
+# constraint check). Produces the ers_spec.json + block_specs.json that the
+# pipeline phase consumes.
+# ---------------------------------------------------------------------------
+
+def _arch_start(args):
+    project_root = _project_root(args.project_root)
+    body = {
+        "requirements_file": args.requirements_file or "",
+        "requirements": args.requirements or "",
+        "target_clock_mhz": args.target_clock_mhz,
+        "pdk_config_path": args.pdk_config_path or "",
+        "max_rounds": args.max_rounds,
+    }
+    print(json.dumps(_post(project_root, "/architecture/start", body), indent=2))
+
+
+def _arch_state(args):
+    project_root = _project_root(args.project_root)
+    print(json.dumps(_get(project_root, "/architecture/state"), indent=2))
+
+
+def _arch_resume(args):
+    project_root = _project_root(args.project_root)
+    body = {
+        "action": args.action,
+        "feedback": args.feedback or "",
+        "rationale": args.rationale or "",
+    }
+    print(json.dumps(_post(project_root, "/architecture/resume", body), indent=2))
+
+
+def _arch_pause(args):
+    project_root = _project_root(args.project_root)
+    print(json.dumps(_post(project_root, "/architecture/pause", {}), indent=2))
+
+
+# ---------------------------------------------------------------------------
+# backend (flat synthesis -> chip_top gate-sim [-> P&R/DRC/LVS])
+# ---------------------------------------------------------------------------
+
+def _backend_start(args):
+    project_root = _project_root(args.project_root)
+    body = {
+        "max_attempts": args.max_attempts,
+        "target_clock_mhz": args.target_clock_mhz,
+        "full": bool(args.full),
+    }
+    print(json.dumps(_post(project_root, "/backend/start", body), indent=2))
+
+
+def _backend_state(args):
+    project_root = _project_root(args.project_root)
+    print(json.dumps(_get(project_root, "/backend/state"), indent=2))
+
+
+def _backend_pause(args):
+    project_root = _project_root(args.project_root)
+    print(json.dumps(_post(project_root, "/backend/pause", {}), indent=2))
+
+
+# ---------------------------------------------------------------------------
+# Main parser
+# ---------------------------------------------------------------------------
+
+def _add_project_root(p: argparse.ArgumentParser):
+    p.add_argument("--project-root", help="overrides $CORESMITH_PROJECT_ROOT")
+
+
+def main():
+    # A-Fix 1: seed profile flag defaults (strict by default) so the CLI and any
+    # daemon it spawns share the same gate posture. Best-effort: the CLI still
+    # works if the engine package isn't importable in this interpreter.
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(_REPO_ROOT))
+        from orchestrator.profile import apply as _apply_profile
+        _apply_profile()
+    except Exception:
+        pass
+
+    ap = argparse.ArgumentParser(prog="coresmith")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    # daemon ...
+    pd = sub.add_parser("daemon", help="manage the coresmithd daemon")
+    psub = pd.add_subparsers(dest="daemon_cmd", required=True)
+    p1 = psub.add_parser("start", help="start the daemon")
+    _add_project_root(p1)
+    p1.add_argument("--port", type=int, default=0, help="bind port (0 = pick free)")
+    p1.set_defaults(func=_daemon_start)
+    p2 = psub.add_parser("stop", help="stop the daemon (SIGTERM)")
+    _add_project_root(p2)
+    p2.set_defaults(func=_daemon_stop)
+    p3 = psub.add_parser("status", help="print daemon.json + liveness")
+    _add_project_root(p3)
+    p3.set_defaults(func=_daemon_status)
+
+    # run start
+    pr1 = sub.add_parser("run", help="run lifecycle")
+    rsub = pr1.add_subparsers(dest="run_cmd", required=True)
+    r1 = rsub.add_parser("start", help="start a fresh pipeline run")
+    _add_project_root(r1)
+    r1.add_argument("--blocks-file", default="")
+    r1.add_argument("--max-attempts", type=int, default=5)
+    r1.add_argument("--target-clock-mhz", type=float, default=50.0)
+    r1.add_argument("--force", action="store_true",
+                    help="discard an existing run and start fresh (default: "
+                         "refuse if a run already exists -- resume it instead)")
+    r1.set_defaults(func=_run_start)
+    r2 = rsub.add_parser("pause", help="cancel the current task")
+    _add_project_root(r2)
+    r2.set_defaults(func=_run_pause)
+    r3 = rsub.add_parser("restart-node",
+                         help="re-run from a specific node (reuses on-disk "
+                              "RTL; targeted alternative to `run start --force`)")
+    _add_project_root(r3)
+    r3.add_argument("node", help="node to restart from, e.g. integration_check, "
+                                 "integration_dv, validation_dv, process_block")
+    r3.add_argument("--refresh-sidecars", action="store_true",
+                    help="re-sync intact-RTL blocks' contract sidecars to live "
+                         "first, so the integration staleness preflight does "
+                         "not force a mass-regen of already-passing blocks")
+    r3.set_defaults(func=_run_restart_node)
+
+    # architecture (PRD/SAD/FRD/ERS/block_diagram). Use BEFORE `run start`
+    # when validation_dv needs an ERS to verify against.
+    pa = sub.add_parser("architecture", help="architecture phase lifecycle")
+    asub = pa.add_subparsers(dest="arch_cmd", required=True)
+    a1 = asub.add_parser("start", help="start the architecture graph")
+    _add_project_root(a1)
+    a1.add_argument("--requirements-file", help="path to requirements.md")
+    a1.add_argument("--requirements", help="inline requirements text")
+    a1.add_argument("--target-clock-mhz", type=float, default=50.0)
+    a1.add_argument("--pdk-config-path", default="")
+    a1.add_argument("--max-rounds", type=int, default=3)
+    a1.set_defaults(func=_arch_start)
+    a2 = asub.add_parser("state", help="architecture state snapshot")
+    _add_project_root(a2)
+    a2.set_defaults(func=_arch_state)
+    a3 = asub.add_parser("resume", help="resume from architecture interrupt")
+    _add_project_root(a3)
+    a3.add_argument(
+        "--action", required=True,
+        help="continue | retry | accept | feedback | abort",
+    )
+    a3.add_argument("--feedback", help="feedback text or JSON answers")
+    a3.add_argument("--rationale", help="rationale logged to the run record")
+    a3.set_defaults(func=_arch_resume)
+    a4 = asub.add_parser("pause", help="cancel the architecture task")
+    _add_project_root(a4)
+    a4.set_defaults(func=_arch_pause)
+
+    # backend (flat synthesis + chip_top gate-sim). Use AFTER the frontend
+    # reaches pipeline_done; set CORESMITH_AUTO_BACKEND=1 on the daemon to have
+    # it make this call itself.
+    pb = sub.add_parser("backend", help="backend lifecycle (flat synth + gate-sim)")
+    bsub = pb.add_subparsers(dest="backend_cmd", required=True)
+    b1 = bsub.add_parser("start", help="flat top synthesis + chip_top gate-sim")
+    _add_project_root(b1)
+    b1.add_argument("--max-attempts", type=int, default=3)
+    b1.add_argument("--target-clock-mhz", type=float, default=50.0)
+    b1.add_argument("--full", action="store_true",
+                    help="continue into P&R/DRC/LVS after the gate-sim verdict "
+                         "(default: stop at the verdict -- P&R is hours of EDA)")
+    b1.set_defaults(func=_backend_start)
+    b2 = bsub.add_parser("state", help="backend state + chip_top gate-sim verdict")
+    _add_project_root(b2)
+    b2.set_defaults(func=_backend_state)
+    b3 = bsub.add_parser("pause", help="cancel the backend task")
+    _add_project_root(b3)
+    b3.set_defaults(func=_backend_pause)
+
+    # state
+    s = sub.add_parser("state", help="print the current pipeline state")
+    _add_project_root(s)
+    s.set_defaults(func=_run_state)
+
+    # resume
+    rs = sub.add_parser("resume", help="resume from the current interrupt")
+    _add_project_root(rs)
+    rs.add_argument(
+        "--action", required=True,
+        help=(
+            "approve | accept | retry | skip | abort | feedback | "
+            "fix_rtl | fix_tb | revise"
+        ),
+    )
+    rs.add_argument("--feedback", help="text feedback for the agent")
+    rs.add_argument("--rtl-fix-description", help="describe the on-disk RTL/TB edit")
+    rs.add_argument("--rationale", help="rationale logged to the run record")
+    rs.add_argument(
+        "--block-actions",
+        help="JSON dict of {block_name: action} for per-block resume",
+    )
+    rs.set_defaults(func=_run_resume)
+
+    # logs
+    lg = sub.add_parser("logs", help="tail pipeline_events.jsonl")
+    _add_project_root(lg)
+    lg.add_argument("-n", "--tail", type=int, default=50)
+    lg.set_defaults(func=_run_logs)
+
+    # harness: verify-as-tool + read-only state queries (engine-owned; direct
+    # in-process calls, no daemon HTTP). Deferred import so the daemon-only
+    # subcommands above still work if the engine package can't be imported.
+    try:
+        from orchestrator.harness.cli import register_subcommands
+        register_subcommands(sub)
+    except Exception:  # noqa: BLE001
+        pass
+
+    args = ap.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

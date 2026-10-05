@@ -1,0 +1,327 @@
+daemon start: reloaded .coresmith/env -- applied ['CORESMITH_SAVED_PATH']
+INFO:     Started server process [8]
+INFO:     Waiting for application startup.
+INFO:     coresmith profile=strict seeded=[(none)] already_set=[CORESMITH_PPA_GATE, CORESMITH_FIDELITY_GATE, CORESMITH_PDK_CHAR, CORESMITH_LATENCY_AUDIT]
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:45675 (Press CTRL+C to quit)
+INFO:     127.0.0.1:34616 - "POST /run/start HTTP/1.1" 200 OK
+[96m[1m  [ENGINE] git SHA (unknown) stamped for this run[0m
+[96m[1m
+============================================================[0m
+[96m[1m  Tier 1: 1 blocks (multiplier8) | Tier 1/1[0m
+[96m[1m============================================================[0m
+INFO:     127.0.0.1:36330 - "GET /run/state HTTP/1.1" 200 OK
+[96m[1m
+============================================================[0m
+[96m[1m  Block: multiplier8 | Tier 1[0m
+[96m[1m============================================================[0m
+[93m[1m  [UARCH] Generating microarchitecture spec for multiplier8...[0m
+[93m[1m  [UARCH] multiplier8: NO reference golden model (no python_source in the block diagram). The uArch spec -- and every RTL lowering below it -- is unconstrained by any reference for this block.[0m
+[PDK-CHAR] WARNING: CORESMITH_PDK_CHAR ENABLED but the ARITHMETIC delay model is NOT characterized for this PDK (hash=7945248b9e36, expected cache /root/.coresmith/pdk_char/arith_7945248b9e36.json, liberty=/usr/share/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib). Crypto/timing budget (lut/gfmul/xortree) will NOT be injected -> the scheduler cannot price the S-box / GF / wide-XOR clouds and may emit an UNREGISTERED combinational cloud that misses Fmax. Warm it first (ensure_pdk_characterized()).
+[PDK-CHAR] WARNING: CORESMITH_PDK_CHAR ENABLED but the ARITHMETIC delay model is NOT characterized for this PDK (hash=7945248b9e36, expected cache /root/.coresmith/pdk_char/arith_7945248b9e36.json, liberty=/usr/share/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib). Crypto/timing budget (lut/gfmul/xortree) will NOT be injected -> the scheduler cannot price the S-box / GF / wide-XOR clouds and may emit an UNREGISTERED combinational cloud that misses Fmax. Warm it first (ensure_pdk_characterized()).
+INFO:     127.0.0.1:55962 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55964 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59750 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59762 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40464 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42242 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42246 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36838 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36844 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50740 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55640 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55656 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59190 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59202 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38450 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50008 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50018 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36654 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36660 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56654 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40070 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40082 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44884 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44900 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58062 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35904 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35916 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48170 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57922 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57926 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60242 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60246 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57670 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53192 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53208 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [UARCH] Generated spec (16152 chars)[0m
+[92m[1m  [UARCH] Auto-approve multiplier8 (chip-level review after tier completes)[0m
+[93m[1m  [RTL] Generating Verilog for multiplier8...[0m
+INFO:     127.0.0.1:55314 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55328 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52476 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60668 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60680 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40776 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57338 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57344 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55902 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55916 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35626 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60894 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60902 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58758 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58764 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37582 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56682 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56692 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57470 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [RTL] Generated to rtl/multiplier8/multiplier8.v[0m
+[93m[1m  [LINT] Running Verilator lint...[0m
+[92m[1m  [LINT] Clean[0m
+[93m[1m  [CONFORM] multiplier8: NOT RUN -- no interface contract edge names this block -- nothing to conform to[0m
+[93m[1m  [TB] Generating cocotb testbench...[0m
+INFO:     127.0.0.1:57478 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34876 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50430 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50446 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53464 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53466 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36508 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46638 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46642 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59530 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59540 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46736 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53550 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53564 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40534 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36310 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36320 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49504 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49506 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40222 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38462 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38476 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47848 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47858 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47426 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35496 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35502 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37316 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37324 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48862 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48040 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [TB] Generated (5 tests)[0m
+[93m[1m  [SIM] Running cocotb simulation...[0m
+[SIM] timeout=900s (default; env=900s declared=0s prior_timeouts=0 cap=1800s) block=multiplier8
+[91m[1m  [SIM] FAILED[0m
+[91m[1m    make: Entering directory '/workspace/silicon-runs/un-20261004-175043/sim_build/multiplier8'[0m
+[91m[1m    make: Leaving directory '/workspace/silicon-runs/un-20261004-175043/sim_build/multiplier8'[0m
+[91m[1m    /usr/local/lib/python3.10/dist-packages/cocotb_tools/makefiles/simulators/Makefile.verilator:29: *** cocotb requires Verilator 5.036 or later, but using 4.038.  Stop.[0m
+[91m[1m  [SIM] Sim failed -- escalating to diagnose for classification[0m
+INFO:     127.0.0.1:48054 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37170 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45036 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45038 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51006 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51008 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52466 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35782 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35786 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42902 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60506 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60512 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51362 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51370 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56342 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43522 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43532 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60842 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60856 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40378 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39196 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39204 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33704 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55138 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55148 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33050 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33054 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54940 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50110 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50124 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40904 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40906 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34900 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [DIAGNOSE] Routed actionable diagnosis -> previous_error.txt[0m
+[93m[1m  [RETRY] INFRASTRUCTURE_ERROR -- re-running attempt 1 after 60s backoff (budget not consumed; consecutive infra failures: 1)[0m
+INFO:     127.0.0.1:41510 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41516 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46664 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60248 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60262 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44044 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44058 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49494 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41366 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41378 - "GET /run/state HTTP/1.1" 200 OK
+[93m[1m  [RTL] Generating Verilog for multiplier8...[0m
+INFO:     127.0.0.1:59856 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59860 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48214 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33784 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33790 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45664 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58306 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58310 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40674 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40684 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45834 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57458 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57468 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39470 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39480 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54592 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55394 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55400 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51262 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60768 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [RTL] Generated to rtl/multiplier8/multiplier8.v[0m
+[93m[1m  [LINT] Running Verilator lint...[0m
+[92m[1m  [LINT] Clean[0m
+[93m[1m  [CONFORM] multiplier8: NOT RUN -- no interface contract edge names this block -- nothing to conform to[0m
+[93m[1m  [TB] Generating cocotb testbench...[0m
+INFO:     127.0.0.1:60774 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53038 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53040 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51450 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36532 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36534 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35250 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53552 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53554 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36504 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36514 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57464 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33808 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33818 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42668 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42676 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45184 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40626 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [TB] Generated (5 tests)[0m
+[93m[1m  [SIM] Running cocotb simulation...[0m
+[SIM] timeout=900s (default; env=900s declared=0s prior_timeouts=0 cap=1800s) block=multiplier8
+[91m[1m  [SIM] FAILED[0m
+[91m[1m    make: Entering directory '/workspace/silicon-runs/un-20261004-175043/sim_build/multiplier8'[0m
+[91m[1m    make: Leaving directory '/workspace/silicon-runs/un-20261004-175043/sim_build/multiplier8'[0m
+[91m[1m    /usr/local/lib/python3.10/dist-packages/cocotb_tools/makefiles/simulators/Makefile.verilator:29: *** cocotb requires Verilator 5.036 or later, but using 4.038.  Stop.[0m
+[91m[1m  [SIM] Sim failed -- escalating to diagnose for classification[0m
+INFO:     127.0.0.1:40632 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36702 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56116 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56118 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44616 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37984 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37998 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50274 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50286 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33102 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35702 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35708 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52268 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52284 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58642 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42498 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42506 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56636 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48576 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48584 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38232 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38238 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43080 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [DIAGNOSE] Routed actionable diagnosis -> previous_error.txt[0m
+[93m[1m  [RETRY] INFRASTRUCTURE_ERROR -- re-running attempt 1 after 120s backoff (budget not consumed; consecutive infra failures: 2)[0m
+INFO:     127.0.0.1:40132 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40148 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52034 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52044 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47656 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59492 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59506 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44206 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44208 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36622 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44840 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44842 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55948 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55962 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60796 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42164 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42174 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59658 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43188 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43202 - "GET /run/state HTTP/1.1" 200 OK
+[93m[1m  [RTL] Generating Verilog for multiplier8...[0m
+INFO:     127.0.0.1:47940 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47946 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38456 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46486 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46496 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36246 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36258 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54834 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50560 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50566 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38870 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38880 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41412 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34616 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34630 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38572 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60958 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [RTL] Generated to rtl/multiplier8/multiplier8.v[0m
+[93m[1m  [LINT] Running Verilator lint...[0m
+[92m[1m  [LINT] Clean[0m
+[93m[1m  [CONFORM] multiplier8: NOT RUN -- no interface contract edge names this block -- nothing to conform to[0m
+[93m[1m  [TB] Generating cocotb testbench...[0m
+INFO:     127.0.0.1:60966 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53786 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53790 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45392 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44372 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44388 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44020 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45652 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45660 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45040 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45056 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58156 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49124 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49132 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51666 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52208 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52212 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43102 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43114 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48230 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47334 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47348 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45548 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38556 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [TB] Generated (5 tests)[0m
+[93m[1m  [SIM] Running cocotb simulation...[0m
+[SIM] timeout=900s (default; env=900s declared=0s prior_timeouts=0 cap=1800s) block=multiplier8
+INFO:     127.0.0.1:38568 - "GET /run/state HTTP/1.1" 200 OK
+[91m[1m  [SIM] FAILED[0m
+[91m[1m    make: Entering directory '/workspace/silicon-runs/un-20261004-175043/sim_build/multiplier8'[0m
+[91m[1m    make: Leaving directory '/workspace/silicon-runs/un-20261004-175043/sim_build/multiplier8'[0m
+[91m[1m    /usr/local/lib/python3.10/dist-packages/cocotb_tools/makefiles/simulators/Makefile.verilator:29: *** cocotb requires Verilator 5.036 or later, but using 4.038.  Stop.[0m
+[91m[1m  [SIM] Sim failed -- escalating to diagnose for classification[0m
+[91m[1m  [DIAGNOSE] SAME structural failure signature 3x in a row for multiplier8 (da61f32fc54e3001) -- escalating (identical retries are not converging)[0m
+[93m[1m  [HUMAN] Intervention needed for multiplier8[0m
+INFO:     127.0.0.1:58420 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [8]

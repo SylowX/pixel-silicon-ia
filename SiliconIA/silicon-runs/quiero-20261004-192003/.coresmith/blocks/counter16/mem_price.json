@@ -1,0 +1,18 @@
+{
+  "block": "counter16",
+  "manifest_present": false,
+  "ok": true,
+  "over_budget": false,
+  "deferred": false,
+  "deferred_reason": "",
+  "reject_rounds": null,
+  "trajectory": "",
+  "manifest_signature": "",
+  "total_area_um2": 0.0,
+  "total_area_mm2": 0.0,
+  "area_budget_um2": null,
+  "sanity_cap_mm2": 2.0,
+  "memories": [],
+  "reasons": [],
+  "note": "no memory manifest"
+}

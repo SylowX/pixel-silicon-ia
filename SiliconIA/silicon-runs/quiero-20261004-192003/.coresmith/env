@@ -1,0 +1,5 @@
+# auto-persisted worker selectors (restart-safe)
+CORESMITH_LLM_PROVIDER=codex
+CORESMITH_CODEX_MODEL=gpt-5.6-sol
+CORESMITH_MODEL=gpt-5.6-sol
+CORESMITH_SAVED_PATH=/OpenROAD-flow-scripts/tools/install/OpenROAD/bin:/OpenROAD-flow-scripts/tools/install/yosys/bin:/workspace/coresmith-main/bin:/usr/local/bin/wrapped-cc:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
