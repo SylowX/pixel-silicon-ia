@@ -1,0 +1,16 @@
+[
+  {
+    "phase": "synth",
+    "attempt": 1,
+    "error": "PPA gate: RTL is PPA-divergent / un-elaboratable vs the uArch storage budget:\n- pre-layout STA produced no parseable timing (OpenSTA emitted no parseable WNS/TNS (rc=1); output tail: Traceback (most recent call last):\n  File \"/workspace/coresmith-main/bin/sta\", line 109, in <module>\n    raise SystemExit(main())\n  File \"/workspace/coresmith-main/bin/sta\", line 88, in main\n    os.execv(real_sta, [real_sta, *args])\nFileNotFoundError: [Errno 2] No such file or directory) -- refusing to declare the b",
+    "category": "INFRASTRUCTURE_ERROR",
+    "round": 1
+  },
+  {
+    "phase": "synth",
+    "attempt": 1,
+    "error": "PPA gate: RTL is PPA-divergent / un-elaboratable vs the uArch storage budget:\n- pre-layout STA produced no parseable timing (OpenSTA emitted no parseable WNS/TNS (rc=1); output tail: Traceback (most recent call last):\n  File \"/workspace/coresmith-main/bin/sta\", line 109, in <module>\n    raise SystemExit(main())\n  File \"/workspace/coresmith-main/bin/sta\", line 88, in main\n    os.execv(real_sta, [real_sta, *args])\nFileNotFoundError: [Errno 2] No such file or directory) -- refusing to declare the b",
+    "category": "AGENT_ERROR",
+    "round": 1
+  }
+]

@@ -1,0 +1,32 @@
+{
+  "sim_passed": true,
+  "attempt": 2,
+  "tests_passed": 5,
+  "tests_total": 5,
+  "coverage": {
+    "applicable": true,
+    "pct": 100.0,
+    "floor": 70.0,
+    "points_total": 26,
+    "points_hit": 26,
+    "uncovered_count": 0,
+    "passed": true
+  },
+  "throughput": {
+    "gate": "measured_throughput",
+    "scope": "block",
+    "applicable": true,
+    "passed": true,
+    "measured_cyc_per_op": 1.0,
+    "declared_cyc_per_op": 1.0,
+    "threshold_cyc_per_op": 1.1,
+    "ratio": 1.0,
+    "n_ops": 32,
+    "artifact_missing": false,
+    "reason": "",
+    "report": ""
+  },
+  "rtl_sha1": "c6687365d04aa173a508ce629f08625b4804cd12",
+  "tb_sha1": "0247880e09e52885323e9e52bf2421afa51f7c1a",
+  "spec_sha256": "1bbf4b3a8de52393f6cbd95a7332b7a22469d59667f8d940b2ee6e3482256098"
+}

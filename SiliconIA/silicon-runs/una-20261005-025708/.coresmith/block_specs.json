@@ -1,0 +1,10 @@
+[
+  {
+    "name": "alu8",
+    "tier": "1",
+    "python_source": "",
+    "rtl_target": "rtl/alu8/alu8.v",
+    "testbench": "tb/cocotb/test_alu8.py",
+    "description": "Una ALU de 8 bits con suma, resta, AND, OR y XOR\n\nRequirements & Constraints:\n- Target PDK: SkyWater Sky130 (130nm) with sky130_fd_sc_hd\n- Clock Frequency: 50 MHz\n- Verilog-2005 compliant synthesizable RTL\n- Synchronous active-low reset (rst_n) when stateful; combinational if no memory/registers required\n- No tri-state buffers, no async resets, no latches\n- Synthesizable with Yosys\n"
+  }
+]

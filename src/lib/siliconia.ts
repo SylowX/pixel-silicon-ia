@@ -93,7 +93,7 @@ export interface PipelineStatus {
   prompt: string;
   mode: "live" | "replay";
   synthetic: boolean;
-  status: "idle" | "running" | "done" | "error";
+  status: "idle" | "running" | "done" | "error" | "aborted";
   phase: string | null;
   design: string | null;
   stages: Record<PipelineStage, StageStatus>;
@@ -185,10 +185,10 @@ export interface RunInfo {
 
 // ─── Run discovery ────────────────────────────────────────────────────────────
 
-const RUN_ID_RE = /^[\w.\-]+$/;
+const RUN_ID_RE = /^[\p{L}\p{N}_.\-]+$/u;
 
 export function isValidRunId(id: string): boolean {
-  return RUN_ID_RE.test(id) && id !== "." && id !== "..";
+  return typeof id === "string" && RUN_ID_RE.test(id) && id !== "." && id !== "..";
 }
 
 export function runDir(id: string): string {
@@ -251,12 +251,22 @@ function runInfo(id: string): RunInfo | null {
   const report = readJson<ReportShape>(reportPath);
   const prompt = (readText(path.join(dir, "prompt.txt")) ?? report?.prompt ?? "").trim();
   const ph = report?.phases;
-  const success = report
+  let success = report
     ? Boolean(ph?.pdk?.success && ph?.coresmith?.success && ph?.orfs?.success)
     : null;
-  const failedPhase = report && !success
+  let failedPhase = report && !success
     ? (ph?.pdk?.success === false ? "pdk" : ph?.coresmith?.success === false ? "coresmith" : ph?.orfs ? "orfs" : "coresmith")
     : null;
+
+  if (report === null) {
+    const siliconEventsPath = path.join(dir, SILICON_EVENTS);
+    const hasAbort = fs.existsSync(siliconEventsPath) && readText(siliconEventsPath)?.includes('"silicon_abort"');
+    const isCurrentAborted = readCurrentRun()?.run_id === id && readCurrentRun()?.status === "aborted";
+    if (hasAbort || isCurrentAborted) {
+      success = false;
+      failedPhase = "aborted";
+    }
+  }
   const finished = report?.timestamp ? Date.parse(report.timestamp) : NaN;
   const metrics: Record<string, number> = {};
   for (const [k, v] of Object.entries(ph?.orfs?.metrics ?? {})) if (typeof v === "number") metrics[k] = v;
@@ -301,6 +311,96 @@ export function resolveRunId(requested?: string | null): string | null {
   const cur = readCurrentRun()?.run_id;
   if (cur && isValidRunId(cur) && fs.existsSync(runDir(cur))) return cur;
   return listRuns()[0]?.id ?? null;
+}
+
+/** Marks the active or specified run as aborted and appends a silicon_abort event. */
+export function abortRun(id?: string | null, reason = "user_stop"): boolean {
+  const targetId = id || readCurrentRun()?.run_id;
+  if (!targetId || !isValidRunId(targetId)) return false;
+  const dir = runDir(targetId);
+  if (!fs.existsSync(dir)) return false;
+
+  const now = Date.now() / 1000;
+  const ev = {
+    ts: now,
+    iso: new Date(now * 1000).toISOString(),
+    pid: 1,
+    event: "silicon_abort",
+    node: "Supervisor",
+    source: "siliconia",
+    reason,
+  };
+  try {
+    fs.appendFileSync(path.join(dir, SILICON_EVENTS), JSON.stringify(ev) + "\n");
+  } catch {
+    return false;
+  }
+
+  const curPath = path.join(RUNS_DIR, CURRENT_FILE);
+  try {
+    const cur = readJson<Record<string, unknown>>(curPath) || {};
+    if (cur.run_id === targetId) {
+      cur.status = "aborted";
+      cur.phase = null;
+      cur.updated_at = new Date().toISOString();
+      fs.writeFileSync(curPath, JSON.stringify(cur, null, 2));
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return true;
+}
+
+/** Permanently deletes a run directory and cleans up current_run.json if needed. */
+export function deleteRun(id: string): boolean {
+  if (!id || !isValidRunId(id)) return false;
+  const dir = runDir(id);
+  if (!fs.existsSync(dir)) return false;
+
+  try {
+    fs.rmSync(dir, { recursive: true, force: true });
+  } catch {
+    return false;
+  }
+
+  // If a symlink 'current' was pointing to this dir, clean it
+  const sym = path.join(RUNS_DIR, "current");
+  try {
+    if (fs.existsSync(sym) || fs.lstatSync(sym).isSymbolicLink()) {
+      try {
+        const link = fs.readlinkSync(sym);
+        if (link === dir || link.includes(id)) fs.unlinkSync(sym);
+      } catch {}
+    }
+  } catch {}
+
+  // Update current_run.json if it pointed to the deleted run
+  const cur = readCurrentRun();
+  if (cur?.run_id === id) {
+    const remaining = listRuns();
+    const curPath = path.join(RUNS_DIR, CURRENT_FILE);
+    const nextRun = remaining[0];
+    if (nextRun) {
+      const newCur = {
+        run_id: nextRun.id,
+        run_dir: `/workspace/silicon-runs/${nextRun.id}`,
+        prompt: nextRun.prompt,
+        status: nextRun.success === true ? "done" : nextRun.success === false ? "error" : "idle",
+        phase: null,
+        updated_at: new Date().toISOString(),
+      };
+      try {
+        fs.writeFileSync(curPath, JSON.stringify(newCur, null, 2));
+      } catch {}
+    } else {
+      try {
+        fs.unlinkSync(curPath);
+      } catch {}
+    }
+  }
+
+  return true;
 }
 
 // ─── JSONL reading ────────────────────────────────────────────────────────────
@@ -609,6 +709,38 @@ export class SiliconModel {
   }
 
   // ── Checklist (per-agent task progress) ─────────────────────────────────────
+
+  private resetAllSteps() {
+    for (const s of this.steps.values()) {
+      s.running.clear();
+      s.done.clear();
+      s.failed.clear();
+      s.attempts = 0;
+      s.since = null;
+      s.skipped = false;
+      s.seen = false;
+    }
+  }
+
+  abort(reason = "user_stop", ts?: number): AgentUpdateEvent[] {
+    const t = ts ?? Date.now() / 1000;
+    const p = this.pipeline;
+    p.status = "aborted";
+    p.phase = null;
+    this.resetAllSteps();
+    this.rebuild();
+    p.stages = emptyStages();
+    p.progress = 0;
+    const updates: AgentUpdateEvent[] = [];
+    for (const role of ROLES) {
+      const detail = role === "supervisor" ? "Pipeline abortado" : undefined;
+      this.set(role, "idle", detail, undefined, t);
+      const u = this.agents.get(role);
+      if (u) updates.push(u);
+    }
+    this.feedPush(t, "supervisor", "Diseño abortado por el usuario", "error");
+    return updates;
+  }
 
   private rt(role: SiliconRole, id: string): StepRT | undefined {
     return this.steps.get(`${role}.${id}`);
@@ -947,6 +1079,10 @@ export class SiliconModel {
           ok ? "ok" : "error");
         break;
       }
+      case "silicon_abort": {
+        this.abort(str(ev.reason) || "user_stop", ts);
+        break;
+      }
 
       // ── CoreSmith LangGraph ────────────────────────────────────────────────
       case "graph_node_enter": {
@@ -1017,6 +1153,18 @@ export class SiliconModel {
         const role = classify(name)?.role ?? this.lastLlmRole ?? "supervisor";
         this.set(role, "waiting", `✗ LLM: ${str(ev.error, 50)}`, undefined, ts);
         this.feedPush(ts, role, `✗ LLM: ${str(ev.error, 50)}`, "error");
+        break;
+      }
+      case "llm_model_fallback": {
+        // CoreSmith failed over to another model (capacity / rate limit / unknown model).
+        const role = this.lastLlmRole ?? "supervisor";
+        const from = str(ev.from_model, 30);
+        const to = str(ev.to_model, 30);
+        const why = ev.reason === "capacity" ? "saturado" : "no disponible";
+        const text = to ? `⇄ ${from} ${why} → ${to}` : `⇄ ${from} ${why} · sin respaldo`;
+        const cur = this.agents.get(role);
+        if (cur) this.set(role, cur.state, `🧠 ${this.lastLlmName || "LLM"} · ${to || from}`, to || undefined, ts);
+        this.feedPush(ts, role, text, to ? "warn" : "error");
         break;
       }
       default:

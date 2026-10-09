@@ -38,28 +38,31 @@ La oficina de pixel art mapea exactamente 6 escritorios (`char_0` a `char_5`), c
 
 ### Estructura de Componentes UI (`src/app/pixel-agents/`)
 - **`page.tsx`**: Shell principal responsive (`.si-shell`) con disposición en 3 columnas cuando `source === "siliconia"`:
-  - **Izquierda (`SiliconBoard.tsx`)**: Tablero de estado en vivo con las tarjetas de los 6 agentes, porcentaje de avance real basado en checklist de pasos, estados de las 10 etapas del pipeline, métricas físicas de silicio (Área en µm², Utilización %, Potencia en mW/µW, Número de Celdas) y log feed cronológico.
+  - **Izquierda (`SiliconBoard.tsx`)**: Tablero de estado en vivo con las tarjetas de los 6 agentes, porcentaje de avance real basado en checklist de pasos, estados de las 10 etapas del pipeline y métricas físicas de silicio (Área en µm², Utilización %, Potencia en mW/µW, Número de Celdas).
   - **Centro**: Lienzos de píxeles (`DeskCanvas.tsx` y `OfficeCanvas.tsx`) mostrando a los personajes trabajando en sus escritorios, caminando o pensando. Incluye el dock inferior **`SiliconComposer.tsx`**.
-  - **Derecha (`SiliconSidebar.tsx`)**: Historial de circuitos diseñados (`SiliconHistory.tsx`), chips de estado del entorno (Docker Desktop, imagen `siliconia-pipeline:latest`, estado del contenedor), visor de consola auto-desplegable y botón de parada de emergencia.
+  - **Derecha (`SiliconSidebar.tsx`)**: Historial de circuitos diseñados (`SiliconHistory.tsx`), feed de eventos en vivo (**`SiliconActivity.tsx`** ubicado entre Historial y Entorno), chips de estado del entorno (Docker Desktop, imagen `siliconia-pipeline:latest`, estado del contenedor), visor de consola auto-desplegable y botón de parada de emergencia.
   - **`SiliconComposer.tsx`**: Barra inferior expandible para describir nuevos circuitos. Soporta **dictado por voz** en español (Web Speech API), ejemplos predeterminados, selector de auto-aprobación y botón de lanzamiento.
   - **`SiliconGui.tsx`**: Componente y botón interactivo para abrir la GUI nativa de OpenROAD directamente sobre el layout físico (`.odb`) de un diseño completado mediante WSLg.
 
 ### Calibración y Comportamiento del Edificio (`OfficeCanvas.tsx`)
 1. **Niveles del Edificio**:
-   - Nivel 4 (Azotea): `Terrace` (piscina y camastros).
-   - Nivel 3: **`Desarrollo`** (oficina principal con 5 estaciones de trabajo y monitores; anteriormente llamada "Studio").
-   - Nivel 2: `Server Room` (racks de servidores iluminados en azul) y `Meeting Room` (sala de juntas de cristal).
-   - Nivel 1: `Lobby` (recepción, cafetería y sofás).
-2. **Mapeo de Estados (`STATE_TO_ZONE`)**:
-   - `editing`, `reading`, `searching`, `idle`, `waiting` ➔ **`studio` (Desarrollo)**: Los personajes pasan la mayor parte del tiempo sentados en sus escritorios trabajando o en espera activa frente a las pantallas, en lugar de subir a la terraza o ir a los sofás.
-   - `running`, `spawning` ➔ **`servers` (Server Room)**: Al simular, sintetizar o compilar, los agentes bajan a operar los racks.
-   - `thinking` ➔ **`meeting` (Meeting Room)**: Planificación de arquitectura y diseño.
-3. **Agentes Ambientales (`AMBIENT_AGENTS`)**:
-   - Se redistribuyeron los 10 personajes decorativos: 5 ocupan los 5 escritorios de **Desarrollo**, 3 operan los racks en **Server Room**, 1 en **Meeting Room** y solo 1 descansa ocasionalmente en la **Terraza**.
-4. **Calibración de Alturas en Desarrollo**:
-   - **Asientos (`SLOTS_INIT.studio`)**: Coordenada ajustada a `y = 0.493` (~378px de 768px). El cuerpo de los personajes descansa exactamente en el cojín de cuero de las sillas (`y = 368-376px`) en lugar de flotar sobre el respaldo.
-   - **Caminata (`ZONE_WALK_FLOOR_Y.studio = 0.500`)**: Altura de suelo calibrada a `0.500` (~384px), asegurando que las suelas de los zapatos pisen con firmeza el suelo de madera (`y = 379-380px`) sin levitar.
-   - **Slots de Server Room**: Ampliado a 4 puestos a lo largo del pasillo (`x = 0.360, 0.430, 0.505, 0.580` en `y = 0.740`).
+   - Nivel 4 (Azotea): `Terrace` (piscina despejada sin artefactos visuales y camastros para descanso).
+   - Nivel 3: **`Desarrollo`** (oficina principal con 5 estaciones de trabajo y monitores).
+   - Nivel 2: `Server Room` (racks de servidores iluminados en azul) y `Meeting Room` (sala de juntas de cristal con mesa redonda y 4 asientos disponibles).
+   - Nivel 1: `Lobby` (recepción, cafetería y sofás de relajación).
+2. **Dinámica de Trabajo vs. Descanso (`allCompletedOrIdle`)**:
+   - **En Diseño Activo**: Los personajes trabajan en sus escritorios de **Desarrollo** (`editing`, `reading`, `searching`) o bajan a los racks de **Server Room** (`running`, `spawning`).
+   - **Al Completar (100%) u Ocio**: Cuando todo el equipo finaliza su labor o no hay diseño en curso, los agentes no se quedan atascados en las pantallas; se desplazan a descansar a la **Terraza**, la cafetería del **Lobby** o se reúnen en la **Meeting Room**.
+   - **Sala de Juntas Multi-Asiento**: Se expandió la capacidad de la mesa de conferencias con 4 slots (`x = 0.650, 0.700, 0.745, 0.790` en `y = 0.730`), permitiendo que varios agentes debatan o descansen sentados juntos.
+3. **Prevención de Solapamiento y Colisiones (`claimedSlots` & `freeSlots`)**:
+   - Se implementó un sistema de asignación exclusiva de slots: un agente sentado o en camino a una silla "reclama" la posición.
+   - Los demás agentes que buscan asiento o deambulan descartan slots ocupados y eligen sillas libres o puntos de paseo aleatorios independientes, evitando que se encimen o superpongan.
+4. **Corrección Visual de la Piscina**:
+   - Se eliminaron el `backdrop-filter: blur` y la capa superpuesta con tinte que generaba la ilusión de que los personajes caminaban sumergidos bajo el agua.
+5. **Calibración de Alturas en Desarrollo**:
+   - **Asientos (`SLOTS_INIT.studio`)**: Coordenada ajustada a `y = 0.493` (~378px de 768px). El cuerpo de los personajes descansa en el cojín de cuero de las sillas (`y = 368-376px`).
+   - **Caminata (`ZONE_WALK_FLOOR_Y.studio = 0.500`)**: Altura de suelo calibrada a `0.500` (~384px), asegurando pisada firme sin levitar.
+   - **Slots de Server Room**: 4 puestos a lo largo del pasillo (`x = 0.360, 0.430, 0.505, 0.580` en `y = 0.740`).
 
 ### Consola del Pipeline en la Barra Lateral (`SiliconSidebar.tsx` + `globals.css`)
 - **Auto-despliegue**: Al iniciar un pipeline (`running === true`), la consola se abre de forma automática sin requerir clic del usuario.
@@ -68,9 +71,11 @@ La oficina de pixel art mapea exactamente 6 escritorios (`char_0` a `char_5`), c
 
 ### API Routes (`src/app/api/pixel-agents/`)
 1. **`silicon-stream/route.ts`**: Endpoint SSE (Server-Sent Events) que lee y combina en tiempo real los eventos de `.coresmith/pipeline_events.jsonl` y `siliconia_events.jsonl` de cada ejecución en `SiliconIA/silicon-runs/`, o genera un replay sintético desde `pipeline_report.json`.
-2. **`silicon-launch/route.ts`**: Endpoint seguro (`GET`, `POST`, `DELETE`) con guardia de loopback (`localGuard.ts`) para ejecutar `run_pipeline.ps1` en PowerShell con argumentos controlados sin shells inseguros.
+2. **`silicon-launch/route.ts`**: Endpoint seguro (`GET`, `POST`, `DELETE`) con guardia de loopback (`localGuard.ts`) para ejecutar `run_pipeline.ps1` en PowerShell con argumentos controlados sin shells inseguros. El método `DELETE` (y la terminación por código 137 / fallas) invoca `abortRun()` para emitir el evento `silicon_abort`, limpiar etapas/agentes a `idle`, marcar el badge en **ABORTADO** y resetear el tablero a 0%.
 3. **`silicon-gui/route.ts`**: Lanza contenedores aislados (`siliconia-gui-<runId>`) para levantar la interfaz gráfica de OpenROAD con aceleración X11/WSLg (`/tmp/.X11-unix` y `/mnt/wslg`).
-4. **`silicon-runs/route.ts`**: Lista los runs existentes, sus métricas, reportes y disponibilidad de archivos de layout `.odb`.
+4. **`silicon-runs/route.ts`**:
+   - `GET`: Lista los runs existentes, sus métricas, reportes y disponibilidad de archivos de layout `.odb`.
+   - `DELETE`: Elimina permanentemente un run del disco (`silicon-runs/<runId>`), reasigna o limpia `current_run.json`, purga en caliente la telemetría en el stream SSE y limpia la tarjeta de "Actividad" en el frontend. Incluye confirmación en 2 pasos en la UI (`SiliconHistory.tsx`).
 
 ---
 
@@ -84,6 +89,14 @@ La oficina de pixel art mapea exactamente 6 escritorios (`char_0` a `char_5`), c
 - **Flujo Físico Backend**: OpenROAD / OpenROAD-flow-scripts (ORFS).
 - **Orquestador**: `SiliconIA/silicon_pipeline.py`.
 - **Launcher CLI**: `SiliconIA/run_pipeline.ps1`.
+- **Simulación cocotb**: cocotb 2.x exige **Verilator ≥ 5.036**. El `Dockerfile` compila Verilator `v5.036` en una etapa `verilator-build` y lo instala en `/opt/verilator` (primero en `PATH`). `verilator_shim.sh` usa `/opt/verilator` y sólo cae a la 4.038 de apt como respaldo. Hasta 2026-10-05 la simulación **nunca** corría (abortaba con "cocotb requires Verilator 5.036"); los runs "exitosos" seguían sólo porque el orquestador continúa si existe RTL.
+
+### LLM agnóstico y tolerancia a "fatiga" del modelo
+- **Configuración** (`pipeline_config.yaml` → `llm`): `provider`, `model` (principal), `fallback_models` (cadena), `model_cooldown_s`, `isolate_workdir`. Overrides del host sin editar el YAML: `SILICONIA_LLM_PROVIDER`, `SILICONIA_LLM_MODEL`, `SILICONIA_LLM_FALLBACKS="m1,m2"` (reenviados por `run_pipeline.ps1`).
+- **Failover** (`coresmith-main/orchestrator/langchain/agents/coresmith_llm.py`): si una llamada devuelve/lanza un error de capacidad (`Selected model is at capacity`, 429/503/529, overloaded, rate limit, quota), se reintenta **de inmediato** con el siguiente modelo y el saturado queda en enfriamiento (`CORESMITH_MODEL_COOLDOWN_S`, 300 s). Modelos desconocidos/sin acceso se omiten 6 h. Funciona para cualquier provider (codex, claude, kimi, agy, opencode). Emite el evento `llm_model_fallback` (consola + tarjeta Actividad).
+- **Bug corregido en el parser de Codex**: un `turn.failed` a mitad de turno devolvía el último mensaje parcial como si fuera la respuesta; ahora se reporta como error (antes aparecía como "agent did not write <archivo>").
+- **Workdir**: `CORESMITH_CODEX_ISOLATE_WORKDIR=0` → el agente trabaja dentro del run; antes usaba carpetas vacías `codex-call-*` y perdía las rutas relativas.
+- **Tests**: `orchestrator/tests/test_model_fallback.py`. Correr con `env -u CORESMITH_MODEL -u CORESMITH_CODEX_MODEL ...` y un `CORESMITH_PROJECT_ROOT` temporal: los tests existentes escriben telemetría en `silicon-runs/current`.
 
 ### Formatos Generados por Run (`silicon-runs/<runId>/outputs/`)
 - **`6_final.odb`**: Base de datos binaria completa de OpenROAD / OpenDB.
@@ -209,4 +222,40 @@ Ubicados en `SiliconIA/silicon-runs/<runId>/outputs/`:
 #### 3. Puntos de Integración en la UI
 - **`SiliconSidebar.tsx` / `SiliconHistory.tsx`**: Añadir un botón destacado **"Ver Layout Web (DEF)"** junto a cada corrida completada que disponga de archivos de salida.
 - **Modal o Pestaña Integrada**: Al hacer clic, abre el visor como un modal flotante o una vista de pantalla completa estilizada con la paleta retro/cyberpunk del proyecto.
+
+---
+
+## 9. Desglose Detallado de los 6 Roles de Silicio
+
+Cada uno de los 6 puestos representa una etapa de la metodología ASIC industrial:
+
+1. **Supervisor (`supervisor`)**:
+   - Actúa como el Director Técnico / Project Lead.
+   - Valida el entorno y PDK SkyWater 130nm, divide el prompt en requerimientos viables, orquesta a los demás agentes, y al final recolecta las métricas de síntesis y PnR para consolidar el `pipeline_report.json`.
+2. **Architect (`architect`)**:
+   - Ingeniero de Arquitectura y Especificación.
+   - Convierte el lenguaje natural en un documento de microarquitectura (`uarch_specs`), definiendo interfaces de pines (`clk`, `rst`, buses), anchos de palabra, máquinas de estados y partición de bloques.
+3. **RTL Coder (`rtl`)**:
+   - Diseñador de Lógica Digital Front-End.
+   - Escribe el código Verilog-2005 sintetizable y ejecuta Verilator para linting estático. Si hay errores de sintaxis, los corrige iterativamente mediante bucles de reflexión con el LLM.
+4. **Verification / DV (`dv`)**:
+   - Ingeniero de Verificación Funcional (Design Verification).
+   - Genera bancos de prueba en Python usando **Cocotb** y corre simulaciones con Verilator 5.036. Inyecta vectores de estímulo exhaustivos o aleatorios y mide cobertura funcional.
+5. **Synthesis (`synth`)**:
+   - Ingeniero de Síntesis Lógica.
+   - Toma el Verilog verificado y mediante **Yosys** lo traduce a una red de compuertas lógicas (netlist gate-level), mapeando cada función booleana a las celdas estándar de la biblioteca SkyWater `sky130_fd_sc_hd`.
+6. **Place & Route (`pnr`)**:
+   - Ingeniero de Diseño Físico Back-End.
+   - Utiliza **OpenROAD** para crear el layout físico: define el tamaño del chip y pines (Floorplan), ubica las celdas (Placement), construye el árbol balanceado de reloj (CTS), traza las pistas metálicas (Routing) y exporta los archivos de manufactura (DEF, ODB y máscara GDSII).
+
+---
+
+## 10. Interpretación de Métricas de Silicio y Escalado de Nanómetros
+
+En la tecnología **SkyWater 130nm (`sky130A`)**:
+- El nodo de fabricación base es **130 nm** (longitud mínima del canal del transistor).
+- Las métricas de dimensiones en los reportes o logs (ej. `1,215 nm` vs `798 nm` o medidas de área en µm²) corresponden a las dimensiones físicas de las celdas estándar, la densidad de empaquetado o el área ocupada por la lógica.
+- Cuando una nueva iteración de un circuito (ej. ALU de 8 bits) reduce su huella de `1,215 nm` a `798 nm` o su área total en micrómetros cuadrados:
+  - **Representa una optimización directa**: Mejor síntesis booleana (menos compuertas redundantes), mejor selección de celdas por parte de Yosys o un empaquetado más denso en OpenROAD.
+  - **Beneficios en silicio**: Menor área de oblea ocupada (menor costo por chip), menor capacitancia parásita en las interconexiones, menor consumo de potencia dinámica y menor retardo de propagación (mayor frecuencia máxima alcanzable).
 

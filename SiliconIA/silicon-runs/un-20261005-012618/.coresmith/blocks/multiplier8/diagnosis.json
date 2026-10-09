@@ -1,0 +1,14 @@
+{
+  "category": "UARCH_SPEC_ERROR",
+  "confidence": 1.0,
+  "diagnosis": "Block multiplier8 has hit the IDENTICAL structural failure 3 attempts in a row (signature 73a73f4b652097fb); the retry loop is not converging -- the wall is architectural, not a local code slip. Last error tail:\nPPA gate: RTL is PPA-divergent / un-elaboratable vs the uArch storage budget:\n- pre-layout STA produced no parseable timing (OpenSTA emitted no parseable WNS/TNS (rc=1); output tail: Traceback (most recent call last):\n  File \"/workspace/coresmith-main/bin/sta\", line 109, in <module>\n    raise SystemExit(main())\n  File \"/workspace/coresmith-main/bin/sta\", line 88, in main\n    os.execv(real_sta, [real_sta, *args])\nFileNotFoundError: [Errno 2] No such file or directory) -- refusing to declare the block within budget on an UNMEASURED timing dimension (fail-closed). Fix the netlist / re-run STA (retry), or set CORESMITH_PPA_TIMING_ADVISORY=1 to accept unmeasurable timing for this run.\n\nBudget vs actual:\n  wns_ns: actual=None budget=None limit=None passed=False",
+  "suggested_fix": "Human/architectural review: revise the uArch spec (simplify the datapath/storage/schedule) rather than regenerating the same RTL again.",
+  "needs_human": true,
+  "escalate": true,
+  "is_testbench_bug": false,
+  "local_fix_possible": false,
+  "constraints": [],
+  "affected_blocks": [
+    "multiplier8"
+  ]
+}

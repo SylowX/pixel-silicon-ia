@@ -1,9 +1,0 @@
-=== DV_SEED LOG ===
-Timestamp: 2026-10-05T01:15:52
-Block: multiplier8
-Attempt: 1
-Command: CORESMITH_DV_SEED 3878623544988850872
-Return code: N/A (exception)
-
-=== ERROR ===
-per-run DV seed for multiplier8: 3878623544988850872

@@ -1,9 +1,0 @@
-=== SIM_TIMEOUT LOG ===
-Timestamp: 2026-10-05T01:15:52
-Block: multiplier8
-Attempt: 1
-Command: CORESMITH_SIM_TIMEOUT_S 900
-Return code: N/A (exception)
-
-=== ERROR ===
-resolved sim timeout for multiplier8: 900s (src=default env=900 declared=0 prior_timeouts=0 cap=1800)

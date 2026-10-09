@@ -1,0 +1,10 @@
+# auto-persisted worker selectors (restart-safe)
+CORESMITH_LLM_PROVIDER=codex
+CORESMITH_CODEX_MODEL=gpt-5.6-terra
+CORESMITH_MODEL=gpt-5.6-terra
+CORESMITH_CODEX_REASONING_EFFORT=high
+CORESMITH_BLOCK_MODEL=gpt-5.6-sol
+CORESMITH_MODEL_FALLBACKS=gpt-5.6-sol,gpt-5.6,gpt-5.5
+CORESMITH_MODEL_COOLDOWN_S=300
+CORESMITH_CODEX_ISOLATE_WORKDIR=0
+CORESMITH_SAVED_PATH=/opt/verilator/bin:/OpenROAD-flow-scripts/tools/install/OpenROAD/bin:/OpenROAD-flow-scripts/tools/install/yosys/bin:/workspace/coresmith-main/bin:/usr/local/bin/wrapped-cc:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

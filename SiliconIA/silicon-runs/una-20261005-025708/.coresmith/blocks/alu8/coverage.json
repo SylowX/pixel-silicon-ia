@@ -1,0 +1,9 @@
+{
+  "applicable": true,
+  "pct": 100.0,
+  "floor": 70.0,
+  "points_total": 26,
+  "points_hit": 26,
+  "uncovered_count": 0,
+  "passed": true
+}

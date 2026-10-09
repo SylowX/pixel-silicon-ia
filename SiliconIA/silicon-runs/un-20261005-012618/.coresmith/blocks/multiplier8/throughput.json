@@ -1,0 +1,14 @@
+{
+  "gate": "measured_throughput",
+  "scope": "block",
+  "applicable": true,
+  "passed": false,
+  "measured_cyc_per_op": null,
+  "declared_cyc_per_op": 1.0,
+  "threshold_cyc_per_op": 1.1,
+  "ratio": null,
+  "n_ops": null,
+  "artifact_missing": true,
+  "reason": "no throughput artifact (TB missing test_throughput_measure)",
+  "report": "MEASURED-THROUGHPUT GATE: block 'multiplier8' declares 1 cyc/op (\u00a76.1) but its testbench produced no 'throughput_measured.json' throughput artifact. The block TB MUST include a `test_throughput_measure` cocotb case that drives N representative ops through the declared interface, counts clk edges per op in steady state (excluding the first-op fill), and writes {\"measured_cyc_per_op\": <float>, \"n_ops\": <int>} to 'throughput_measured.json' in the sim cwd. Regenerate the TB to add it."
+}

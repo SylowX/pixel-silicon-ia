@@ -34,15 +34,31 @@ docker:
   # Port for CoreSmith daemon API
   daemon_port: 8080
 
-# --- LLM Provider ---
+# --- LLM Provider (agnóstico) ---
+# Cambia `provider` + `model` para usar otro backend (codex | claude | kimi | agy | opencode).
+# Si el modelo principal se satura ("Selected model is at capacity", 429/503,
+# rate limit, quota...), CoreSmith cambia de inmediato al siguiente modelo de
+# `fallback_models` y deja el saturado en enfriamiento `model_cooldown_s`
+# segundos antes de volver a intentarlo. Un modelo que el proveedor no reconoce
+# se omite automáticamente.
+# Override sin editar este archivo (variables del host):
+#   SILICONIA_LLM_PROVIDER, SILICONIA_LLM_MODEL, SILICONIA_LLM_FALLBACKS="m1,m2"
 llm:
-  provider: "codex"  # codex | claude | opencode
-  codex_model: "gpt-5.6-sol"
+  provider: "codex"
+  model: "gpt-5.6-terra"
+  fallback_models:
+    - "gpt-5.6-sol"
+    - "gpt-5.6"
+    - "gpt-5.5"
+  model_cooldown_s: 300
   codex_sandbox: "danger-full-access"
-  # Model for block-level agents
+  # Model for block-level agents (por defecto = model)
   block_model: "gpt-5.6-sol"
   # Reasoning effort
   reasoning_effort: "high"
+  # false = el agente trabaja dentro del run (rutas relativas válidas).
+  # true  = carpeta temporal codex-call-* por llamada (causaba archivos "perdidos").
+  isolate_workdir: false
 
 # --- PDK (Sky130) ---
 pdk:

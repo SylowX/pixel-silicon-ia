@@ -1,0 +1,54 @@
+=== SIMULATE LOG ===
+Timestamp: 2026-10-05T10:21:30
+Block: alu8
+Attempt: 2
+Command: /usr/bin/make -C /workspace/silicon-runs/una-20261005-025708/sim_build/alu8
+Return code: 0
+
+=== STDOUT ===
+make: Entering directory '/workspace/silicon-runs/una-20261005-025708/sim_build/alu8'
+rm -f results.xml
+rm -f results.xml
+COCOTB_TEST_MODULES=test_alu8 COCOTB_TESTCASE=  COCOTB_TOPLEVEL=alu8 TOPLEVEL_LANG=verilog       \
+         sim_build/Vtop  --trace --trace-structs --build-jobs 2 -Wno-fatal --coverage   
+     -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:242  in gpi_load_users                  Loaded entry library: '/usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0'
+     -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:233  in gpi_load_users                  Running entry func 'initialize' from loaded library '/usr/local/lib/python3.10/dist-packages/cocotb/simulator.cpython-310-x86_64-linux-gnu.so'
+     -.--ns INFO     pygpi                              ..ib/pygpi/embed.cpp:114  in initialize                      Using Python 3.10.19 interpreter at /usr/bin/python3
+     -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:74   in gpi_print_registered_impl       GPI: VPI support registered
+     0.00ns INFO     cocotb.initialize                  Seeding Python random module with 1791195688
+     0.00ns INFO     cocotb.initialize                  Initialized cocotb v2.1.0 from /usr/local/lib/python3.10/dist-packages/cocotb
+     0.00ns INFO     cocotb.initialize                  Running on Verilator version 5.036 2025-04-27
+     0.00ns INFO     cocotb.regression                  Running tests
+     0.00ns INFO     cocotb.regression                  running test_alu8.test_reset_equivalent_idle (1/5)
+                                                            The stateless, reset-less ALU is deterministic from time zero.
+     4.00ns INFO     cocotb.regression                  test_alu8.test_reset_equivalent_idle passed
+     4.00ns INFO     cocotb.regression                  running test_alu8.test_known_vectors (2/5)
+                                                            Exercise arithmetic wrap, bitwise operations, and all opcode encodings.
+    84.00ns INFO     cocotb.regression                  test_alu8.test_known_vectors passed
+    84.00ns INFO     cocotb.regression                  running test_alu8.test_random_stress (3/5)
+                                                            Check more than 100 seed-derived U8 and opcode tuples against the model.
+  1108.00ns INFO     cocotb.regression                  test_alu8.test_random_stress passed
+  1108.00ns INFO     cocotb.regression                  running test_alu8.test_sustained_combinational_stream (4/5)
+                                                            Sustain representative changing activity at the 50 MHz integration rate.
+ 11348.00ns INFO     cocotb.regression                  test_alu8.test_sustained_combinational_stream passed
+ 11348.00ns INFO     cocotb.regression                  running test_alu8.test_throughput_measure (5/5)
+                                                            Record steady-state enclosing-clock cadence for this latency-zero block.
+ 11988.00ns INFO     cocotb.regression                  test_alu8.test_throughput_measure passed
+ 11988.00ns INFO     cocotb.regression                  *******************************************************************************************************
+                                                        ** TEST                                           STATUS  SIM TIME (ns)  REAL TIME (s)  RATIO (ns/s) **
+                                                        *******************************************************************************************************
+                                                        ** test_alu8.test_reset_equivalent_idle            PASS           4.00           0.00       1848.06  **
+                                                        ** test_alu8.test_known_vectors                    PASS          80.00           0.00      16245.45  **
+                                                        ** test_alu8.test_random_stress                    PASS        1024.00           0.08      12563.57  **
+                                                        ** test_alu8.test_sustained_combinational_stream   PASS       10240.00           0.06     167265.21  **
+                                                        ** test_alu8.test_throughput_measure               PASS         640.00           0.01      75328.74  **
+                                                        *******************************************************************************************************
+                                                        ** TESTS=5 PASS=5 FAIL=0 SKIP=0                               11988.00           0.16      73505.15  **
+                                                        *******************************************************************************************************
+- :0: Verilog $finish
+make: Leaving directory '/workspace/silicon-runs/una-20261005-025708/sim_build/alu8'
+
+
+=== STDERR ===
+/usr/local/lib/python3.10/dist-packages/cocotb_tools/makefiles/simulators/Makefile.verilator:73: Using MODULE is deprecated, please use COCOTB_TEST_MODULES instead.
+

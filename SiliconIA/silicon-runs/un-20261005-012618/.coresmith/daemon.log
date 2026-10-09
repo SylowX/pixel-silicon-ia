@@ -1,0 +1,396 @@
+daemon start: reloaded .coresmith/env -- applied ['CORESMITH_SAVED_PATH']
+INFO:     Started server process [8]
+INFO:     Waiting for application startup.
+INFO:     coresmith profile=strict seeded=[(none)] already_set=[CORESMITH_PPA_GATE, CORESMITH_FIDELITY_GATE, CORESMITH_PDK_CHAR, CORESMITH_LATENCY_AUDIT]
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:43325 (Press CTRL+C to quit)
+INFO:     127.0.0.1:44808 - "POST /run/start HTTP/1.1" 200 OK
+[96m[1m  [ENGINE] git SHA (unknown) stamped for this run[0m
+[96m[1m
+============================================================[0m
+[96m[1m  Tier 1: 1 blocks (multiplier8) | Tier 1/1[0m
+[96m[1m============================================================[0m
+[96m[1m
+============================================================[0m
+[96m[1m  Block: multiplier8 | Tier 1[0m
+[96m[1m============================================================[0m
+[93m[1m  [UARCH] Generating microarchitecture spec for multiplier8...[0m
+[93m[1m  [UARCH] multiplier8: NO reference golden model (no python_source in the block diagram). The uArch spec -- and every RTL lowering below it -- is unconstrained by any reference for this block.[0m
+[PDK-CHAR] WARNING: CORESMITH_PDK_CHAR ENABLED but the ARITHMETIC delay model is NOT characterized for this PDK (hash=7945248b9e36, expected cache /root/.coresmith/pdk_char/arith_7945248b9e36.json, liberty=/usr/share/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib). Crypto/timing budget (lut/gfmul/xortree) will NOT be injected -> the scheduler cannot price the S-box / GF / wide-XOR clouds and may emit an UNREGISTERED combinational cloud that misses Fmax. Warm it first (ensure_pdk_characterized()).
+[PDK-CHAR] WARNING: CORESMITH_PDK_CHAR ENABLED but the ARITHMETIC delay model is NOT characterized for this PDK (hash=7945248b9e36, expected cache /root/.coresmith/pdk_char/arith_7945248b9e36.json, liberty=/usr/share/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib). Crypto/timing budget (lut/gfmul/xortree) will NOT be injected -> the scheduler cannot price the S-box / GF / wide-XOR clouds and may emit an UNREGISTERED combinational cloud that misses Fmax. Warm it first (ensure_pdk_characterized()).
+INFO:     127.0.0.1:54190 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40738 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40744 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36780 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36784 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45526 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38074 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38082 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39484 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40548 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40558 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49854 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49866 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48266 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36804 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36810 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60896 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60900 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57748 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52512 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52518 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58116 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58120 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46134 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40714 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40718 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36510 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36526 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44886 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33000 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33006 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41360 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41376 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48230 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58916 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58928 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60344 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60348 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54234 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55472 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55488 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56806 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56818 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45494 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51004 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51018 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55844 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [UARCH] Generated spec (13310 chars)[0m
+[92m[1m  [UARCH] Auto-approve multiplier8 (chip-level review after tier completes)[0m
+[93m[1m  [RTL] Generating Verilog for multiplier8...[0m
+INFO:     127.0.0.1:55860 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60962 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59826 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59830 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51218 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51226 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37734 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35096 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35110 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58740 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58750 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43344 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50416 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50422 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34578 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34584 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43550 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38570 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38574 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [RTL] Generated to rtl/multiplier8/multiplier8.v[0m
+[93m[1m  [LINT] Running Verilator lint...[0m
+[92m[1m  [LINT] Clean[0m
+[93m[1m  [CONFORM] multiplier8: NOT RUN -- no interface contract edge names this block -- nothing to conform to[0m
+[93m[1m  [TB] Generating cocotb testbench...[0m
+INFO:     127.0.0.1:53136 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46244 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46256 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49562 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49576 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47918 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44858 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44874 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48348 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48352 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53476 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40026 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40038 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54552 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54568 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55058 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35534 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35540 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55926 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55942 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59216 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56820 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56826 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37222 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37236 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44280 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59902 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59914 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47488 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [TB] Generated (4 tests)[0m
+[93m[1m  [SIM] Running cocotb simulation...[0m
+[SIM] timeout=900s (default; env=900s declared=0s prior_timeouts=0 cap=1800s) block=multiplier8
+INFO:     127.0.0.1:46854 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [SIM] PASSED[0m
+[93m[1m  [SYNTH] Running Yosys synthesis...[0m
+[92m[1m  [SYNTH] SUCCESS: 248 cells, 1,939.4 µm²[0m
+pre-layout STA produced no timing for multiplier8: OpenSTA emitted no parseable WNS/TNS (rc=1); output tail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory
+fan-out-aware STA failed for multiplier8: maxfanout STA produced no timing: base[sta_parse_fail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory
+] buf[sta_parse_fail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory
+]
+[91m[1m  [PPA] multiplier8: fan-out-aware STA produced NO timing and there is no base measurement either -- timing is UNMEASURED: maxfanout STA produced no timing: base[sta_parse_fail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/b[0m
+[91m[1m  [PPA] multiplier8 -> diagnose: pre-layout STA produced no parseable timing (OpenSTA emitted no parseable WNS/TNS (rc=1); output tail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory) -- refusing to declare the block within budget on an UNMEASURED timing dimension (fail-closed). Fix the netlist / re-run STA (retry), or set CORESMITH_PPA_TIMING_ADVISORY=1 to accept unmeasurable timing for this run.[0m
+[93m[1m  [GATE-SIM] Replaying verified RTL vectors through the gate netlist...[0m
+[93m[1m  [GATE-SIM] NOT RUN -- scope=chip_top: this gate only judges the integrated chip_top netlist, and 'multiplier8' is a leaf block. A per-block netlist is not the artifact that becomes silicon, and per-block replay drives it with that block's own testbench rather than real chip traffic. Set CORESMITH_GATE_SIM_SCOPE=block for per-block replay.[0m
+INFO:     127.0.0.1:46866 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51820 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45916 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45928 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44724 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57714 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57720 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39498 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39502 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50490 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34408 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34422 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44188 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44194 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58656 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59646 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59656 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55486 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55492 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43574 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34446 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34458 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [DIAGNOSE] Routed actionable diagnosis -> previous_error.txt[0m
+[93m[1m  [RETRY] INFRASTRUCTURE_ERROR -- re-running attempt 1 after 60s backoff (budget not consumed; consecutive infra failures: 1)[0m
+INFO:     127.0.0.1:50570 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50574 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48540 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38844 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38854 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50844 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50852 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58586 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51918 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51930 - "GET /run/state HTTP/1.1" 200 OK
+[93m[1m  [RTL] Generating Verilog for multiplier8...[0m
+INFO:     127.0.0.1:38112 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38128 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53448 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51826 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51836 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54938 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54940 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34454 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53908 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53914 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48352 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57940 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57950 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46874 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46878 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36174 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [RTL] Generated to rtl/multiplier8/multiplier8.v[0m
+[93m[1m  [LINT] Running Verilator lint...[0m
+[92m[1m  [LINT] Clean[0m
+[93m[1m  [CONFORM] multiplier8: NOT RUN -- no interface contract edge names this block -- nothing to conform to[0m
+[93m[1m  [TB] Generating cocotb testbench...[0m
+INFO:     127.0.0.1:35394 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35396 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52982 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52990 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42188 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57366 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57378 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38846 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38858 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54684 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41724 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41738 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41278 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41288 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47332 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47116 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47122 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60086 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [TB] Generated (4 tests)[0m
+[93m[1m  [SIM] Running cocotb simulation...[0m
+[SIM] timeout=900s (default; env=900s declared=0s prior_timeouts=0 cap=1800s) block=multiplier8
+INFO:     127.0.0.1:60090 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [SIM] PASSED[0m
+[93m[1m  [SYNTH] Running Yosys synthesis...[0m
+[92m[1m  [SYNTH] SUCCESS: 248 cells, 1,939.4 µm²[0m
+pre-layout STA produced no timing for multiplier8: OpenSTA emitted no parseable WNS/TNS (rc=1); output tail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory
+fan-out-aware STA failed for multiplier8: maxfanout STA produced no timing: base[sta_parse_fail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory
+] buf[sta_parse_fail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory
+]
+[91m[1m  [PPA] multiplier8: fan-out-aware STA produced NO timing and there is no base measurement either -- timing is UNMEASURED: maxfanout STA produced no timing: base[sta_parse_fail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/b[0m
+[91m[1m  [PPA] multiplier8 -> diagnose: pre-layout STA produced no parseable timing (OpenSTA emitted no parseable WNS/TNS (rc=1); output tail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory) -- refusing to declare the block within budget on an UNMEASURED timing dimension (fail-closed). Fix the netlist / re-run STA (retry), or set CORESMITH_PPA_TIMING_ADVISORY=1 to accept unmeasurable timing for this run.[0m
+[93m[1m  [GATE-SIM] Replaying verified RTL vectors through the gate netlist...[0m
+[93m[1m  [GATE-SIM] NOT RUN -- scope=chip_top: this gate only judges the integrated chip_top netlist, and 'multiplier8' is a leaf block. A per-block netlist is not the artifact that becomes silicon, and per-block replay drives it with that block's own testbench rather than real chip traffic. Set CORESMITH_GATE_SIM_SCOPE=block for per-block replay.[0m
+INFO:     127.0.0.1:43978 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55704 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55716 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36458 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54322 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54332 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41888 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41890 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54970 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34716 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34732 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42278 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42284 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40504 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34180 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34186 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40958 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40962 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58494 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54750 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54766 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41596 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [DIAGNOSE] Routed actionable diagnosis -> previous_error.txt[0m
+[93m[1m  [RETRY] INFRASTRUCTURE_ERROR -- re-running attempt 1 after 120s backoff (budget not consumed; consecutive infra failures: 2)[0m
+INFO:     127.0.0.1:41604 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48700 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32774 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32790 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51374 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51384 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44538 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44888 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44892 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40644 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40648 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42686 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54770 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54774 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44874 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44884 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54046 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38684 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38686 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58434 - "GET /run/state HTTP/1.1" 200 OK
+[93m[1m  [RTL] Generating Verilog for multiplier8...[0m
+INFO:     127.0.0.1:58446 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55700 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44670 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44676 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50158 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53294 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53310 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40738 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40754 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [RTL] Generated to rtl/multiplier8/multiplier8.v[0m
+[93m[1m  [LINT] Running Verilator lint...[0m
+[92m[1m  [LINT] Clean[0m
+[93m[1m  [CONFORM] multiplier8: NOT RUN -- no interface contract edge names this block -- nothing to conform to[0m
+[93m[1m  [TB] Generating cocotb testbench...[0m
+INFO:     127.0.0.1:57530 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56734 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56746 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52046 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52048 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45992 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46880 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46888 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50400 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50408 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52060 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60292 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60300 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48958 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48970 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41280 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50024 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50040 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [TB] Generated (4 tests)[0m
+[93m[1m  [SIM] Running cocotb simulation...[0m
+[SIM] timeout=900s (default; env=900s declared=0s prior_timeouts=0 cap=1800s) block=multiplier8
+INFO:     127.0.0.1:42114 - "GET /run/state HTTP/1.1" 200 OK
+[92m[1m  [SIM] PASSED[0m
+[93m[1m  [SYNTH] Running Yosys synthesis...[0m
+[92m[1m  [SYNTH] SUCCESS: 248 cells, 1,939.4 µm²[0m
+pre-layout STA produced no timing for multiplier8: OpenSTA emitted no parseable WNS/TNS (rc=1); output tail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory
+fan-out-aware STA failed for multiplier8: maxfanout STA produced no timing: base[sta_parse_fail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory
+] buf[sta_parse_fail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory
+]
+[91m[1m  [PPA] multiplier8: fan-out-aware STA produced NO timing and there is no base measurement either -- timing is UNMEASURED: maxfanout STA produced no timing: base[sta_parse_fail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/b[0m
+[91m[1m  [PPA] multiplier8 -> diagnose: pre-layout STA produced no parseable timing (OpenSTA emitted no parseable WNS/TNS (rc=1); output tail: Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory) -- refusing to declare the block within budget on an UNMEASURED timing dimension (fail-closed). Fix the netlist / re-run STA (retry), or set CORESMITH_PPA_TIMING_ADVISORY=1 to accept unmeasurable timing for this run.[0m
+[93m[1m  [GATE-SIM] Replaying verified RTL vectors through the gate netlist...[0m
+[93m[1m  [GATE-SIM] NOT RUN -- scope=chip_top: this gate only judges the integrated chip_top netlist, and 'multiplier8' is a leaf block. A per-block netlist is not the artifact that becomes silicon, and per-block replay drives it with that block's own testbench rather than real chip traffic. Set CORESMITH_GATE_SIM_SCOPE=block for per-block replay.[0m
+[91m[1m  [DIAGNOSE] SAME structural failure signature 3x in a row for multiplier8 (73a73f4b652097fb) -- escalating (identical retries are not converging)[0m
+[93m[1m  [HUMAN] Intervention needed for multiplier8[0m
+INFO:     127.0.0.1:42122 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34120 - "GET /run/state HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [8]

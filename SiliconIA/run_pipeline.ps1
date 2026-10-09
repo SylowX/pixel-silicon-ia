@@ -1,4 +1,4 @@
-﻿# =============================================================================
+# =============================================================================
 # SiliconIA Pipeline Launcher
 # Prompt → CoreSmith → OpenROAD-flow-scripts → Sky130 → OpenROAD GUI
 #
@@ -163,6 +163,13 @@ if ($env:OPENAI_API_KEY) {
 }
 if ($env:CODEX_API_KEY) {
     $dockerArgs += @("-e", "CODEX_API_KEY=$($env:CODEX_API_KEY)")
+}
+# Optional model overrides (provider-agnostic); pipeline_config.yaml is the default source.
+foreach ($llmVar in @("SILICONIA_LLM_PROVIDER", "SILICONIA_LLM_MODEL", "SILICONIA_LLM_FALLBACKS")) {
+    $llmVal = [Environment]::GetEnvironmentVariable($llmVar)
+    if ($llmVal) {
+        $dockerArgs += @("-e", "$llmVar=$llmVal")
+    }
 }
 
 # ---- X11 / WSLg Forwarding for OpenROAD GUI ----

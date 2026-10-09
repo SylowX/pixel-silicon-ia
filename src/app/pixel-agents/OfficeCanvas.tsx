@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useAgentData } from "./AgentDataContext";
-import type { MultiAgentState } from "./AgentDataContext";
+import type { MultiAgentState, PipelineStatus, AgentEntry } from "./AgentDataContext";
 
 // ─── Static config ─────────────────────────────────────────────────────────────
 const STATE_TO_ZONE: Record<MultiAgentState, string> = {
@@ -63,17 +63,16 @@ function seatAnim(zone: string): { row: number; frames: number[] } {
 const WALK_ANIM = { row: 0, frames: [0, 1, 2, 1] };
 
 // ─── Ambient agents — always visible, purely decorative, zero tokens ──────────
-const AMBIENT_AGENTS: [string, { state: MultiAgentState; role: string }][] = [
-  ["amb_1",    { state: "editing",   role: "ambient" }],  // Desarrollo slot 0
-  ["amb_2",    { state: "reading",   role: "ambient" }],  // Desarrollo slot 1
-  ["amb_3",    { state: "searching", role: "ambient" }],  // Desarrollo slot 2
-  ["amb_4",    { state: "editing",   role: "ambient" }],  // Desarrollo slot 3
-  ["amb_5",    { state: "running",   role: "ambient" }],  // Server room rack 0
-  ["amb_6",    { state: "running",   role: "ambient" }],  // Server room rack 1
-  ["amb_7",    { state: "running",   role: "ambient" }],  // Server room rack 2
-  ["amb_8",    { state: "thinking",  role: "ambient" }],  // Meeting room
-  ["amb_9",    { state: "idle",      role: "ambient" }],  // Desarrollo slot 4
-  ["amb_10",   { state: "waiting",   role: "ambient" }],  // Terraza (solo 1 relajándose)
+type AmbientConfig = { state: MultiAgentState; role: string; zone?: string };
+const AMBIENT_AGENTS: [string, AmbientConfig][] = [
+  ["amb_1",       { state: "editing",   role: "ambient", zone: "studio" }],   // Desarrollo escritorio 0
+  ["amb_2",       { state: "reading",   role: "ambient", zone: "studio" }],   // Desarrollo escritorio 1
+  ["amb_3",       { state: "searching", role: "ambient", zone: "studio" }],   // Desarrollo escritorio 2
+  ["amb_5",       { state: "running",   role: "ambient", zone: "servers" }],  // Server room rack 0
+  ["amb_6",       { state: "running",   role: "ambient", zone: "servers" }],  // Server room rack 1
+  ["amb_8",       { state: "thinking",  role: "ambient", zone: "meeting" }],  // Meeting room silla 1
+  ["amb_terrace", { state: "waiting",   role: "ambient", zone: "terrace" }],  // Terraza camastro
+  ["amb_pool",    { state: "idle",      role: "ambient", zone: "pool" }],     // Piscina nadando
 ];
 
 // ─── DEMO_MODE ─────────────────────────────────────────────────────────────────
@@ -95,22 +94,39 @@ type LobbyZone = { key: string; label: string; left: number; top: number; w: num
 
 const SLOTS_INIT: Record<string, SlotDef[]> = {
   studio:  [
-    { x: 0.505, y: 0.493, facing: 1 },
-    { x: 0.579, y: 0.493, facing: -1 },
-    { x: 0.652, y: 0.493, facing: 1 },
-    { x: 0.430, y: 0.493, facing: -1 },
     { x: 0.355, y: 0.493, facing: 1 },
+    { x: 0.430, y: 0.493, facing: -1 },
+    { x: 0.505, y: 0.493, facing: 1 },
+    { x: 0.580, y: 0.493, facing: -1 },
+    { x: 0.655, y: 0.493, facing: 1 },
   ],
-  meeting: [{ x: 0.643, y: 0.710, facing: -1 }, { x: 0.731, y: 0.710, facing: 1 }, { x: 0.704, y: 0.710, facing: -1 }, { x: 0.676, y: 0.710, facing: 1 }],
+  meeting: [
+    { x: 0.630, y: 0.740, facing: 1 },   // Silla 1 (izquierda, mirando al centro)
+    { x: 0.735, y: 0.740, facing: -1 },  // Silla 3 (centro-derecha, mirando al centro)
+    { x: 0.680, y: 0.740, facing: 1 },   // Silla 2 (centro-izquierda, mirando al centro)
+    { x: 0.785, y: 0.740, facing: -1 },  // Silla 4 (derecha, mirando al centro)
+  ],
   servers: [
     { x: 0.360, y: 0.740, facing: 1 },
-    { x: 0.430, y: 0.740, facing: -1 },
-    { x: 0.505, y: 0.740, facing: 1 },
-    { x: 0.580, y: 0.740, facing: -1 },
+    { x: 0.435, y: 0.740, facing: -1 },
+    { x: 0.510, y: 0.740, facing: 1 },
+    { x: 0.585, y: 0.740, facing: -1 },
   ],
-  terrace: [{ x: 0.280, y: 0.184, facing: 1 }, { x: 0.310, y: 0.184, facing: -1 }, { x: 0.340, y: 0.184, facing: 1 }, { x: 0.370, y: 0.184, facing: -1 }, { x: 0.692, y: 0.183, facing: 1 }, { x: 0.727, y: 0.183, facing: -1 }],
-  pool:    [{ x: 0.46,  y: 0.254, facing: 1 }, { x: 0.52,  y: 0.254, facing: -1 }, { x: 0.58,  y: 0.254, facing: 1 }],
-  sofa:    [{ x: 0.497, y: 0.950, facing: 1 }, { x: 0.482, y: 0.950, facing: -1 }],
+  terrace: [
+    { x: 0.290, y: 0.184, facing: 1 },   // Camastro izquierdo
+    { x: 0.760, y: 0.184, facing: -1 },  // Camastro derecho
+    { x: 0.365, y: 0.184, facing: -1 },  // Centro pérgola
+    { x: 0.695, y: 0.184, facing: 1 },   // Mirador barandal
+  ],
+  pool: [
+    { x: 0.450, y: 0.254, facing: 1 },   // Nadador izquierdo
+    { x: 0.590, y: 0.254, facing: -1 },  // Nadador derecho
+    { x: 0.520, y: 0.254, facing: 1 },   // Nadador centro
+  ],
+  sofa: [
+    { x: 0.485, y: 0.950, facing: 1 },   // Lado izquierdo del sillón
+    { x: 0.565, y: 0.950, facing: -1 },  // Lado derecho del sillón
+  ],
 };
 
 // Derive zone slots from the bottom edge of lobby zone rectangles
@@ -167,18 +183,65 @@ const FLOORS_INIT = [
 ];
 
 const LOBBY_ZONES_INIT: LobbyZone[] = [
-  { key: "cafe", label: "Café", left: 0.665, top: 0.923, w: 0.133, h: 0.059, seats: 3, facing: -1, color: "rgba(251,146,60,0.18)", border: "rgba(251,146,60,0.9)" },
+  { key: "cafe", label: "Café", left: 0.675, top: 0.923, w: 0.120, h: 0.059, seats: 2, facing: -1, color: "rgba(251,146,60,0.18)", border: "rgba(251,146,60,0.9)" },
 ];
+
+const ROLE_TO_SEAT: Record<string, number> = {
+  supervisor:  0,
+  architect:   1,
+  rtl:         2,
+  "rtl-coder": 2,
+  dv:          3,
+  verifier:    3,
+  synth:       4,
+  synthesis:   4,
+  pnr:         5,
+};
+
+const RESTING_ZONES_BY_SEAT: Record<number, string> = {
+  0: "meeting", // Supervisor: Sala de juntas con architect y colegas
+  1: "meeting", // Architect: Sala de juntas con supervisor
+  2: "terrace", // RTL coder: Camastro en la terraza con vista al atardecer
+  3: "pool",    // Verifier: Nadando en la piscina de la azotea
+  4: "cafe",    // Synthesis: Tomando café en el lobby café
+  5: "sofa",    // PnR: Descansando en el sillón lounge del lobby
+};
+
+function checkIsDesigning(pipeline: PipelineStatus | null, agents: Map<string, AgentEntry>): boolean {
+  if (!pipeline) return false;
+  if (pipeline.status !== "running") return false;
+  if (pipeline.progress >= 100) return false;
+
+  const tasks = Object.values(pipeline.tasks || {});
+  if (tasks.length > 0 && tasks.every((t) => t.status === "done" || t.pct >= 100)) {
+    return false;
+  }
+
+  const activeStates = new Set<MultiAgentState>(["editing", "running", "thinking", "searching", "reading", "spawning"]);
+  const hasActiveAgent = Array.from(agents.values()).some((a) => activeStates.has(a.state));
+  if (hasActiveAgent) return true;
+
+  return tasks.some((t) => t.status === "working");
+}
 
 // ─── OfficeCanvas ──────────────────────────────────────────────────────────────
 export function OfficeCanvas() {
-  const { agents } = useAgentData();
+  const { agents, pipeline } = useAgentData();
+  const isDesigning = checkIsDesigning(pipeline, agents);
   const containerRef = useRef<HTMLDivElement>(null);
   const innerRef     = useRef<HTMLDivElement>(null);
   const [cw, setCw]  = useState(0);
   const [tick, setTick] = useState(0);
   const animRef  = useRef<Map<string, AgentAnim>>(new Map());
-  const stateRef = useRef({ cw: 0, elevX: 0.195, floors: FLOORS_INIT, slots: SLOTS_INIT, lobbyZones: LOBBY_ZONES_INIT });
+  const stateRef = useRef({
+    cw: 0,
+    elevX: 0.195,
+    floors: FLOORS_INIT,
+    slots: SLOTS_INIT,
+    lobbyZones: LOBBY_ZONES_INIT,
+    isDesigning,
+    agents,
+  });
 
   // Calibration state
   const [floors,     setFloors]     = useState(FLOORS_INIT);
@@ -198,38 +261,121 @@ export function OfficeCanvas() {
   }, []);
 
   // Sync stateRef on every render so the interval can read fresh values
-  stateRef.current = { cw, elevX, floors, slots, lobbyZones };
+  stateRef.current = { cw, elevX, floors, slots, lobbyZones, isDesigning, agents };
 
   useEffect(() => {
     const id = setInterval(() => {
-      const { cw: W, elevX: EX, floors: FL, slots: SL, lobbyZones: LZ } = stateRef.current;
+      const {
+        cw: W,
+        elevX: EX,
+        floors: FL,
+        slots: SL,
+        lobbyZones: LZ,
+        isDesigning: curDesigning,
+        agents: curAgents,
+      } = stateRef.current;
       if (W === 0) return;
       const H = W * BG_RATIO;
       const FW = Math.round(W * SPRITE_W_FRAC);
       const FH = FW * 2;
       const walkPx = W * 0.006;
-      const list = DEMO_MODE ? DEMO_AGENTS : [...Array.from(agents.entries()), ...AMBIENT_AGENTS];
+      const list = DEMO_MODE ? DEMO_AGENTS : [...Array.from(curAgents.entries()), ...AMBIENT_AGENTS];
       const allS = { ...SL, ...deriveZoneSlots(LZ) };
-      const zc = new Map<string, number>();
+      const claimedSlots = new Map<string, Set<number>>();
       let ambCount = 0;
 
       list.forEach(([id, entry], gi) => {
         const isAmbient = id.startsWith("amb_");
-        const seat = (entry as { seat?: number }).seat;
-        const charN = isAmbient ? 1 + (ambCount++ % 5) : (typeof seat === "number" ? Math.min(Math.max(seat, 0), 5) : 0);
-        const desiredZone = id === "amb_pool" ? "pool" : (STATE_TO_ZONE[entry.state] ?? "sofa");
-        const si = zc.get(desiredZone) ?? 0; zc.set(desiredZone, si + 1);
+        const rawSeat = (entry as { seat?: number }).seat;
+        const roleName = (entry as { role?: string }).role || id;
+        const seatNum = typeof rawSeat === "number" ? rawSeat : (ROLE_TO_SEAT[roleName] ?? gi);
+        const charN = isAmbient
+          ? 1 + (ambCount++ % 5)
+          : Math.min(Math.max(seatNum, 0), 5);
+
+        let desiredZone: string;
+        if (isAmbient) {
+          const ambZone = (entry as { zone?: string }).zone;
+          if (ambZone) {
+            desiredZone = ambZone;
+          } else if (id === "amb_pool") {
+            desiredZone = "pool";
+          } else {
+            desiredZone = STATE_TO_ZONE[entry.state] ?? "studio";
+          }
+        } else {
+          // Silicon pipeline agent (supervisor, architect, rtl, dv, synth, pnr)
+          if (curDesigning) {
+            // Diseño en curso: trabajar en Desarrollo / Server Room / Meeting
+            if (seatNum === 0 || seatNum === 1) {
+              desiredZone = entry.state === "thinking" ? "meeting" : "studio";
+            } else if (seatNum === 2) {
+              desiredZone = "studio";
+            } else {
+              desiredZone = (entry.state === "running" || entry.state === "spawning") ? "servers" : "studio";
+            }
+          } else {
+            // Diseño terminado (100%), inactivo o abortado: descansar en lobby, terraza, piscina o junta
+            desiredZone = RESTING_ZONES_BY_SEAT[seatNum] ?? "terrace";
+          }
+        }
+
+        // Slot selection: assign a guaranteed unique, un-claimed slot per zone
         const zSlots = allS[desiredZone] ?? allS.sofa;
-        const slot = zSlots[Math.min(si, zSlots.length - 1)];
+        let claimed = claimedSlots.get(desiredZone);
+        if (!claimed) {
+          claimed = new Set<number>();
+          claimedSlots.set(desiredZone, claimed);
+        }
+
+        let slotIdx = -1;
+        for (let i = 0; i < zSlots.length; i++) {
+          if (!claimed.has(i)) {
+            slotIdx = i;
+            break;
+          }
+        }
+
+        let targetZone = desiredZone;
+        let activeZSlots = zSlots;
+        if (slotIdx === -1) {
+          // If zone is full, find an empty slot in another relaxation/work zone
+          const fallbacks = curDesigning
+            ? ["studio", "servers"]
+            : ["sofa", "terrace", "pool", "cafe", "meeting"];
+          for (const altZone of fallbacks) {
+            const altSlots = allS[altZone] ?? [];
+            let altClaimed = claimedSlots.get(altZone);
+            if (!altClaimed) {
+              altClaimed = new Set<number>();
+              claimedSlots.set(altZone, altClaimed);
+            }
+            for (let i = 0; i < altSlots.length; i++) {
+              if (!altClaimed.has(i)) {
+                targetZone = altZone;
+                activeZSlots = altSlots;
+                slotIdx = i;
+                claimed = altClaimed;
+                break;
+              }
+            }
+            if (slotIdx !== -1) break;
+          }
+        }
+
+        if (slotIdx !== -1) {
+          claimed.add(slotIdx);
+        }
+        const slot = activeZSlots[Math.max(0, slotIdx)];
+        desiredZone = targetZone;
+
         const floorLabel = ZONE_TO_FLOOR[desiredZone];
         const floorY = ZONE_WALK_FLOOR_Y[desiredZone] ?? FL.find(f => f.label === floorLabel)?.y ?? 0.500;
-        const physSeat = desiredZone === "sofa" || desiredZone === "terrace" || desiredZone === "studio" || desiredZone === "pool";
+        const physSeat = desiredZone === "sofa" || desiredZone === "terrace" || desiredZone === "studio" || desiredZone === "pool" || desiredZone === "meeting";
         // All positions as fractions — immune to resize
         const FWf = FW / W; const FHf = FH / H;
         const walkTopFrac = floorY - FHf;
-        const seatTopFrac = desiredZone === "pool"
-          ? POOL.top - FHf / 3
-          : physSeat ? slot.y - FHf : floorY - FHf;
+        const seatTopFrac = physSeat ? slot.y - FHf : floorY - FHf;
         const destXFrac = slot.x - FWf / 2;
         const inPool = desiredZone === "pool" && slot.x >= POOL.left && slot.x <= POOL.left + POOL.w;
         const walkFrac = 0.006; // walkPx / W
@@ -269,7 +415,9 @@ export function OfficeCanvas() {
           a.targetXFrac = EX - FWf / 2;
         } else {
           // at-seat same zone: re-anchor and maybe wander
-          a.xFrac = destXFrac;
+          if (Math.abs(a.targetXFrac - destXFrac) < 0.001) {
+            a.xFrac = destXFrac;
+          }
           a.topFrac = seatTopFrac;
           const sa = seatAnim(a.zone);
           a.frameIdx = (a.frameIdx + 1) % sa.frames.length;
@@ -280,12 +428,30 @@ export function OfficeCanvas() {
             a.idleTicks = 0;
             const wanderSlots = allS[a.zone] ?? [];
             if (wanderSlots.length > 1) {
-              const other = wanderSlots[Math.floor(Math.random() * wanderSlots.length)];
-              const newXFrac = other.x - FWf / 2;
-              if (Math.abs(newXFrac - a.xFrac) > FWf) {
+              // Only pick a vacant slot that has no other agent near it
+              const minGap = FWf * 1.6;
+              const freeSlots = wanderSlots.filter((s) => {
+                const sx = s.x - FWf / 2;
+                if (Math.abs(sx - a.xFrac) <= FWf) return false;
+                for (const [otherId, otherAnim] of animRef.current.entries()) {
+                  if (otherId === id) continue;
+                  if (otherAnim.zone === a.zone) {
+                    if (Math.abs(otherAnim.targetXFrac - sx) < minGap ||
+                        Math.abs(otherAnim.xFrac - sx) < minGap) {
+                      return false;
+                    }
+                  }
+                }
+                return true;
+              });
+
+              if (freeSlots.length > 0) {
+                const other = freeSlots[Math.floor(Math.random() * freeSlots.length)];
+                const newXFrac = other.x - FWf / 2;
                 a.phase = "walk-seat";
                 a.targetXFrac = newXFrac;
                 a.topFrac = walkTopFrac;
+                a.facing = other.facing;
               }
             }
           }
@@ -294,7 +460,7 @@ export function OfficeCanvas() {
       setTick(t => t + 1);
     }, 150);
     return () => clearInterval(id);
-  }, [agents]);
+  }, [agents, pipeline]);
 
   // ── Drag helpers ─────────────────────────────────────────────────────────────
   function frac(e: React.MouseEvent) {
@@ -404,19 +570,10 @@ export function OfficeCanvas() {
             backgroundPosition: `-${col * FW}px -${animRow * FH}px`,
             backgroundSize: `${FW * 7}px ${FH * 3}px`,
             transform: facing === -1 ? "scaleX(-1)" : undefined,
-            // pool swimmers behind water overlay; all walkers (incl. pool crossing) in front
-            zIndex: (inPool || zone === "pool") ? 1 : 3,
+            zIndex: 3,
             filter: undefined,
           }} />
         ))}
-
-        {/* Pool water overlay */}
-        <div style={{
-          position: "absolute", left: `${POOL.left * 100}%`, top: `${POOL.top * 100}%`,
-          width: `${POOL.w * 100}%`, height: `${POOL.h * 100}%`,
-          background: "linear-gradient(180deg,rgba(14,165,233,0.38) 0%,rgba(6,182,212,0.28) 60%,rgba(8,145,178,0.18) 100%)",
-          backdropFilter: "blur(1.5px)", zIndex: 2, pointerEvents: "none",
-        }} />
 
         {DEMO_MODE && (<>
           {/* Floor lines — drag vertically */}

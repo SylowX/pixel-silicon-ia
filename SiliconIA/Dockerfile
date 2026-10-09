@@ -3,6 +3,22 @@
 # Prompt → CoreSmith → OpenROAD-flow-scripts → Sky130 → OpenROAD GUI
 # =============================================================================
 
+# ---- Stage 1: Verilator >= 5.036 (cocotb 2.x refuses anything older) ----
+# Ubuntu 22.04's apt ships Verilator 4.038, so every cocotb simulation aborted
+# with "cocotb requires Verilator 5.036 or later" before compiling the RTL.
+FROM ubuntu:22.04 AS verilator-build
+ARG VERILATOR_VERSION=v5.036
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git ca-certificates perl python3 make autoconf g++ flex bison ccache \
+        help2man libfl2 libfl-dev zlib1g zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 --branch ${VERILATOR_VERSION} https://github.com/verilator/verilator.git /src/verilator \
+    && cd /src/verilator && autoconf \
+    && ./configure --prefix=/opt/verilator \
+    && make -j"$(nproc)" && make install \
+    && rm -rf /src/verilator
+
 FROM openroad/orfs:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -10,12 +26,16 @@ ENV TZ=America/Los_Angeles
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
-# ---- Ensure system utilities, Verilator, and Node.js 20 (for Codex CLI) ----
+# ---- Ensure system utilities and Node.js 20 (for Codex CLI) ----
+# (Verilator comes from the builder stage above, not apt.)
 RUN apt-get update && apt-get install -y \
-    curl ca-certificates git xdot python3-tk python3-pip verilator \
+    curl ca-certificates git xdot python3-tk python3-pip libfl2 zlib1g-dev \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
+
+COPY --from=verilator-build /opt/verilator /opt/verilator
+RUN /opt/verilator/bin/verilator --version
 
 # ---- Install Codex CLI ----
 RUN npm install -g @openai/codex
@@ -57,7 +77,7 @@ RUN python3 -m pip install --no-cache-dir \
 # ---- Environment Variables ----
 ENV FLOW_HOME=/OpenROAD-flow-scripts/flow
 ENV OPENROAD_EXE=/OpenROAD-flow-scripts/tools/install/OpenROAD/bin/openroad
-ENV PATH="/OpenROAD-flow-scripts/tools/install/OpenROAD/bin:/OpenROAD-flow-scripts/tools/install/yosys/bin:/workspace/coresmith-main/bin:${PATH}"
+ENV PATH="/opt/verilator/bin:/OpenROAD-flow-scripts/tools/install/OpenROAD/bin:/OpenROAD-flow-scripts/tools/install/yosys/bin:/workspace/coresmith-main/bin:${PATH}"
 ENV PYTHONPATH="/workspace/coresmith-main:${PYTHONPATH}"
 ENV PYTHONUNBUFFERED=1
 ENV CORESMITH_PROJECT_ROOT=/workspace/silicon-runs/current

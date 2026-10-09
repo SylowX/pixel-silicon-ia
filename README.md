@@ -28,9 +28,16 @@ This project converts natural-language hardware specifications (*Prompts*) into 
   - Core Utilization %
   - Estimated Power Consumption (mW / µW)
   - Standard Cell Count
+- **Provider-Agnostic LLM Failover & Saturation Resilience**: Instant, hot fallback mechanism configured in `pipeline_config.yaml`. If a model encounters capacity/rate limits (HTTP 429, 503, 529, or "at capacity"), it switches immediately to the next backup model in `fallback_models` while placing the saturated model in cooldown (`model_cooldown_s`). Can be overridden without touching configs via `SILICONIA_LLM_PROVIDER`, `SILICONIA_LLM_MODEL`, and `SILICONIA_LLM_FALLBACKS`.
+- **Cocotb 2.x & Verilator 5.036 Functional Verification**: Pre-compiled custom Docker container with native Python testbench simulation, enabling full functional testing and code coverage before gate-level logic synthesis.
+- **Interactive Multi-Floor Pixel Art Office (`OfficeCanvas`)**:
+  - **Work vs. Rest Dynamics**: While a circuit is in design, agents actively operate in *Desarrollo* (Development) or the *Server Room* racks. When all tasks complete (100%) or during idle states, agents naturally move to relax on the *Terrace*, visit the *Lobby* café, or gather in the *Meeting Room*.
+  - **Multi-Seat Conference Room**: Up to 4 agents can sit and collaborate simultaneously around the glass meeting room table.
+  - **Collision & Overlap Prevention**: Exclusive chair booking (`claimedSlots`) and intelligent roaming prevent sprites from stacking on top of each other.
+  - **Crystal Clear Pool Terrace**: Removed artificial blur and overlay artifacts from the swimming pool area.
 - **Voice-Enabled Circuit Composer (`SiliconComposer`)**: Bottom expandable dock to describe circuits in natural language, featuring **voice dictation** (Web Speech API), preset prompt examples, and an auto-approve trigger.
 - **Native Physical Layout GUI (`SiliconGui`)**: Launches the containerized **OpenROAD GUI** via WSLg (`/tmp/.X11-unix`) to visually inspect metal layers, standard cell placement, and wire routing.
-- **History & Pipeline Console**: Run history log, Docker engine health indicators, and a live tail of the backend compilation console.
+- **Run Management, Live Activity & Instant Abort**: Chronological design history, run deletion with live telemetry and Activity feed purging, emergency stop button with instant 0% reset, and Docker engine health indicators.
 - **Dual Mode**: Streams SiliconIA chip runs (default) or connects to local Claude Code sessions via Server-Sent Events (SSE).
 
 ---
@@ -95,24 +102,27 @@ pixel-agents-main/
 ├── PROJECT_MEMORY.md                 ← Technical architecture & memory document
 ├── AGENTS.md                         ← Antigravity agent configuration and rules
 ├── SiliconIA/                        ← Semiconductor design factory
+│   ├── pipeline_config.yaml          ← Centralized LLM model & fallback configuration
 │   ├── run_pipeline.ps1              ← Docker container launcher script
 │   ├── silicon_pipeline.py           ← Multi-agent Python orchestrator
-│   ├── Dockerfile                    ← Unified EDA image (Yosys + OpenROAD + Sky130)
+│   ├── Dockerfile                    ← Unified EDA image (Verilator 5 + Yosys + OpenROAD + Sky130)
+│   ├── coresmith-main/               ← Multi-agent network & LLM fallback orchestrator
 │   └── silicon-runs/                 ← Output directories, netlists, ODB & GDSII
 ├── src/
 │   ├── app/
 │   │   ├── api/pixel-agents/
 │   │   │   ├── silicon-stream/       ← SSE event streaming endpoint
-│   │   │   ├── silicon-launch/       ← Safe pipeline launcher endpoint
+│   │   │   ├── silicon-launch/       ← Safe pipeline launcher & abort endpoint
 │   │   │   ├── silicon-gui/          ← WSLg OpenROAD GUI runner
-│   │   │   └── silicon-runs/         ← Historical run runs and metrics
+│   │   │   └── silicon-runs/         ← Historical run metrics & deletion API
 │   │   └── pixel-agents/
 │   │       ├── page.tsx              ← 3-column layout (Board · Office · Sidebar)
 │   │       ├── SiliconBoard.tsx      ← Agent checklist, stage cards & silicon metrics
 │   │       ├── SiliconComposer.tsx   ← Bottom natural-language prompt dock
 │   │       ├── SiliconSidebar.tsx    ← Run history, Docker health & live log
+│   │       ├── SiliconActivity.tsx   ← Live activity & pipeline event feed
 │   │       ├── DeskCanvas.tsx        ← 6-desk animated canvas
-│   │       └── OfficeCanvas.tsx      ← Retro multi-floor office building
+│   │       └── OfficeCanvas.tsx      ← Interactive multi-floor pixel art office
 │   └── lib/
 │       ├── siliconia.ts              ← Telemetry parser, metric extraction & types
 │       └── localGuard.ts             ← Loopback security guard for local actions

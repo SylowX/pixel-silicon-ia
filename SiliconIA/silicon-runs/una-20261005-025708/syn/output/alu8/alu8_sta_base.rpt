@@ -1,0 +1,10 @@
+# OpenSTA fan-out-aware pre-layout report (base: unbuffered) for alu8
+# period: 20.0 ns  clock port: clk
+
+Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory
+

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { PanelTitle } from "./SiliconBoard";
 import { closeGui, openGui, useSiliconGui } from "./SiliconGui";
+import { useAgentData } from "./AgentDataContext";
 
 // History of designed circuits. Clicking a finished design opens its layout in
 // the OpenROAD GUI; "ver en tablero" replays the run on the progress board.
@@ -41,7 +42,10 @@ function replay(id: string) {
 export function SiliconHistory() {
   const [runs, setRuns] = useState<RunInfo[] | null>(null);
   const [activeRun, setActiveRun] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const gui = useSiliconGui();
+  const { pipeline, dispatch } = useAgentData();
 
   const load = useCallback(async () => {
     try {
@@ -57,6 +61,45 @@ export function SiliconHistory() {
     const id = setInterval(load, 10000);
     return () => clearInterval(id);
   }, [load]);
+
+  useEffect(() => {
+    if (!confirmDeleteId) return;
+    const t = setTimeout(() => setConfirmDeleteId(null), 4000);
+    return () => clearTimeout(t);
+  }, [confirmDeleteId]);
+
+  const handleDelete = async (id: string) => {
+    if (confirmDeleteId !== id) {
+      setConfirmDeleteId(id);
+      return;
+    }
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/pixel-agents/silicon-runs?runId=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setConfirmDeleteId(null);
+        const q = new URLSearchParams(window.location.search);
+        if (q.get("run") === id) {
+          q.delete("run");
+          q.delete("replay");
+          const qs = q.toString();
+          window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+        }
+        if (pipeline?.runId === id) {
+          dispatch({ type: "session_change", sessionId: "none" });
+          dispatch({ type: "pipeline", pipeline: null });
+        }
+        window.dispatchEvent(new CustomEvent("silicon-run-deleted", { detail: { runId: id } }));
+        await load();
+      }
+    } catch {
+      /* keep last */
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const list = (runs ?? []).slice().sort((a, b) => (b.finishedMs ?? b.mtimeMs) - (a.finishedMs ?? a.mtimeMs));
   const ok = list.filter((r) => r.success).length;
@@ -83,7 +126,8 @@ export function SiliconHistory() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 420, overflowY: "auto", paddingRight: 2 }}>
         {list.map((r) => {
-          const inProgress = r.success === null && (r.id === activeRun || !r.hasReport);
+          const inProgress = r.id === activeRun;
+          const isAborted = r.failedPhase === "aborted" || (!r.hasReport && !inProgress && r.success !== true);
           const g = gui.guis[r.id];
           const open = Boolean(g?.running);
           const busy = Boolean(gui.pending[r.id]);
@@ -107,8 +151,42 @@ export function SiliconHistory() {
                 <span style={{ color: iconColor, fontWeight: 700, width: 14, textAlign: "center" }}>{icon}</span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{r.design ?? r.id.replace(/-\d{8}-\d{6}$/, "")}</span>
                 <span style={{ marginLeft: "auto", fontSize: 10, color: "rgba(255,255,255,0.35)", whiteSpace: "nowrap" }}>
-                  {inProgress ? "en curso" : fmtDate(r.finishedMs ?? r.mtimeMs)}
+                  {inProgress ? "en curso" : isAborted ? "abortado" : fmtDate(r.finishedMs ?? r.mtimeMs)}
                 </span>
+                <button
+                  type="button"
+                  title={confirmDeleteId === r.id ? "Haz clic de nuevo para confirmar eliminación" : "Eliminar del historial"}
+                  disabled={deletingId === r.id || inProgress}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(r.id);
+                  }}
+                  style={{
+                    background: confirmDeleteId === r.id ? "rgba(244,63,94,0.25)" : "transparent",
+                    border: confirmDeleteId === r.id ? "1px solid rgba(244,63,94,0.6)" : "none",
+                    borderRadius: 4,
+                    color: confirmDeleteId === r.id ? "#f43f5e" : "rgba(255,255,255,0.28)",
+                    fontSize: confirmDeleteId === r.id ? 9 : 11,
+                    cursor: inProgress ? "not-allowed" : "pointer",
+                    padding: confirmDeleteId === r.id ? "1px 6px" : "1px 4px",
+                    lineHeight: 1,
+                    transition: "color 0.2s, background 0.2s, border 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (confirmDeleteId !== r.id) {
+                      e.currentTarget.style.color = "#f43f5e";
+                      e.currentTarget.style.background = "rgba(244,63,94,0.12)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (confirmDeleteId !== r.id) {
+                      e.currentTarget.style.color = "rgba(255,255,255,0.28)";
+                      e.currentTarget.style.background = "transparent";
+                    }
+                  }}
+                >
+                  {deletingId === r.id ? "…" : confirmDeleteId === r.id ? "eliminar?" : "🗑"}
+                </button>
               </div>
               {r.prompt && (
                 <div className="si-hist-prompt">{r.prompt}</div>
@@ -117,8 +195,10 @@ export function SiliconHistory() {
                 {area !== undefined && <span className="si-hist-chip">{Math.round(area).toLocaleString("es-MX")} µm²</span>}
                 {cells !== undefined && <span className="si-hist-chip">{cells} celdas</span>}
                 {r.metrics.utilization_pct !== undefined && <span className="si-hist-chip">{r.metrics.utilization_pct}% util</span>}
-                {!inProgress && r.success === false && (
-                  <span style={{ color: "#f43f5e" }}>falló en {PHASE_ES[r.failedPhase ?? ""] ?? r.failedPhase ?? "?"}</span>
+                {!inProgress && (r.success === false || isAborted) && (
+                  <span style={{ color: "#f43f5e" }}>
+                    {r.failedPhase === "aborted" || isAborted ? "diseño abortado" : `falló en ${PHASE_ES[r.failedPhase ?? ""] ?? r.failedPhase ?? "?"}`}
+                  </span>
                 )}
                 <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
                   {(r.hasEvents || r.hasReport) && (

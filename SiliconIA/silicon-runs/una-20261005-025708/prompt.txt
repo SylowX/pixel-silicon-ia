@@ -1,0 +1,1 @@
+Una ALU de 8 bits con suma, resta, AND, OR y XOR

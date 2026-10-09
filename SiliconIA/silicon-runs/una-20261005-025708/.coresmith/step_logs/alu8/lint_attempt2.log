@@ -1,0 +1,25 @@
+=== LINT LOG ===
+Timestamp: 2026-10-05T10:19:09
+Block: alu8
+Attempt: 2
+Command: verilator --lint-only -Wall -Wno-fatal -Wno-EOFNEWLINE /workspace/silicon-runs/una-20261005-025708/rtl/alu8/alu8.v
+Return code: 0
+
+=== STDOUT ===
+- V e r i l a t i o n   R e p o r t: Verilator 5.036 2025-04-27 rev v5.036
+- Verilator: Built from 0.025 MB sources in 2 modules, into 0.015 MB in 5 C++ files needing 0.000 MB
+- Verilator: Walltime 0.030 s (elab=0.001, cvt=0.004, bld=0.000); cpu 0.013 s on 1 threads; alloced 9.066 MB
+
+
+=== STDERR ===
+%Warning-UNUSEDSIGNAL: /workspace/silicon-runs/una-20261005-025708/rtl/alu8/alu8.v:33:16: Signal is not used: 'invalid_op'
+                                                                                        : ... note: In instance 'alu8'
+   33 |     wire       invalid_op;
+      |                ^~~~~~~~~~
+                       ... For warning description see https://verilator.org/warn/UNUSEDSIGNAL?v=5.036
+                       ... Use "/* verilator lint_off UNUSEDSIGNAL */" and lint_on around source to disable this message.
+%Warning-UNUSEDSIGNAL: /workspace/silicon-runs/una-20261005-025708/rtl/alu8/alu8.v:38:16: Bits of signal are not used: 'arith_ext'[8]
+                                                                                        : ... note: In instance 'alu8'
+   38 |     wire [8:0] arith_ext;
+      |                ^~~~~~~~~
+

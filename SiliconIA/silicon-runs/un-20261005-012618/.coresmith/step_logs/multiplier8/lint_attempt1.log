@@ -1,0 +1,15 @@
+=== LINT LOG ===
+Timestamp: 2026-10-05T08:48:42
+Block: multiplier8
+Attempt: 1
+Command: verilator --lint-only -Wall -Wno-fatal -Wno-EOFNEWLINE /workspace/silicon-runs/un-20261005-012618/rtl/multiplier8/multiplier8.v
+Return code: 0
+
+=== STDOUT ===
+- V e r i l a t i o n   R e p o r t: Verilator 5.036 2025-04-27 rev v5.036
+- Verilator: Built from 0.024 MB sources in 2 modules, into 0.015 MB in 5 C++ files needing 0.000 MB
+- Verilator: Walltime 0.025 s (elab=0.000, cvt=0.003, bld=0.000); cpu 0.009 s on 1 threads; alloced 9.129 MB
+
+
+=== STDERR ===
+

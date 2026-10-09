@@ -20,6 +20,7 @@ import { execFile, spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { localOnlyGuard as guard, stripAnsi } from "@/lib/localGuard";
+import { abortRun } from "@/lib/siliconia";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -223,6 +224,9 @@ export async function POST(req: Request) {
     launcher.pid = null;
     g.__siliconEnvCache = undefined;
     try { fs.unlinkSync(promptFile); } catch { /* already gone */ }
+    if (code !== 0 && code !== null) {
+      abortRun(launchedRunId(), code === 137 ? "user_stop" : `exit_${code}`);
+    }
   };
   child.on("exit", (code) => done(code));
   child.on("error", () => done(-1));
@@ -235,8 +239,10 @@ export async function DELETE(req: Request) {
   const denied = guard(req, false);
   if (denied) return denied;
   const pid = launcher.pid;
+  const runId = launchedRunId();
   await run("docker", ["stop", CONTAINER], 20000);
   if (pid) await run("taskkill", ["/T", "/F", "/PID", String(pid)], 8000);
+  abortRun(runId, "user_stop");
   g.__siliconEnvCache = undefined;
   return Response.json({ ok: true, launcher: launcherView() });
 }

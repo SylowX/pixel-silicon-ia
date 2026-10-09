@@ -1,7 +1,0 @@
-{
-  "gate": "measured_throughput",
-  "scope": "block",
-  "applicable": false,
-  "passed": null,
-  "reason": "functional DV failed; throughput not measured"
-}

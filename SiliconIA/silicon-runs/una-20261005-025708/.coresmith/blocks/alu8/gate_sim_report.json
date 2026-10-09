@@ -1,0 +1,11 @@
+{
+  "ran": false,
+  "ok": true,
+  "status": "not_run",
+  "reason": "scope=chip_top: this gate only judges the integrated chip_top netlist, and 'alu8' is a leaf block. A per-block netlist is not the artifact that becomes silicon, and per-block replay drives it with that block's own testbench rather than real chip traffic. Set CORESMITH_GATE_SIM_SCOPE=block for per-block replay.",
+  "netlist_path": "",
+  "cycles_compared": 0,
+  "output_bits_compared": 0,
+  "first_divergence": {},
+  "detail": {}
+}

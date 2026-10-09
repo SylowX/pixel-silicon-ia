@@ -1,10 +1,10 @@
 {
-  "run_id": "quiero-20261004-192003",
-  "run_dir": "/workspace/silicon-runs/quiero-20261004-192003",
-  "prompt": "Quiero un contador de 16 bits con reset as\u00edncrono y habilitaci\u00f3n\n",
+  "run_id": "una-20261005-025708",
+  "run_dir": "/workspace/silicon-runs/una-20261005-025708",
+  "prompt": "Una ALU de 8 bits con suma, resta, AND, OR y XOR\n",
   "status": "done",
   "phase": null,
-  "started_at": "2026-10-04T19:20:03.437088",
-  "updated_at": "2026-10-04T19:44:02.960231",
+  "started_at": "2026-10-05T02:57:08.906047",
+  "updated_at": "2026-10-05T03:22:54.677914",
   "pid": 1
 }

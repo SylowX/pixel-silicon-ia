@@ -533,6 +533,12 @@ def _parse_codex_json(stdout: str) -> tuple[str, dict]:
     usage: dict = {}
     session_id: str = ""
     error_msgs: list[str] = []
+    # SiliconIA: True when the LAST turn ended in ``turn.failed`` (no later
+    # ``turn.completed``). A capacity/quota failure can arrive mid-turn after
+    # the agent already emitted progress commentary; returning that commentary
+    # as the "answer" hid the failure and surfaced later as a misleading
+    # "agent did not write <file>" postcondition error.
+    turn_failed = False
     for raw in stdout.splitlines():
         raw = raw.strip()
         if not raw:
@@ -559,7 +565,10 @@ def _parse_codex_json(stdout: str) -> tuple[str, dict]:
                 final_text = item.get("text", "") or final_text
         elif ev_type == "turn.completed":
             usage = obj.get("usage") or usage
+            turn_failed = False
         elif ev_type in ("error", "turn.failed"):
+            if ev_type == "turn.failed":
+                turn_failed = True
             # WP-15: codex reports provider/quota failures as an `error`
             # event and exits 0 with no agent_message (observed: "You've
             # hit your usage limit"). Without this the empty answer looked
@@ -573,6 +582,11 @@ def _parse_codex_json(stdout: str) -> tuple[str, dict]:
     if not final_text and error_msgs:
         final_text = ("[ClaudeLLM error: codex CLI reported: "
                       + " | ".join(error_msgs)[:600] + "]")
+    elif turn_failed and error_msgs:
+        partial = " ".join(final_text.split())[:200]
+        final_text = ("[ClaudeLLM error: codex CLI reported: "
+                      + " | ".join(error_msgs)[:600]
+                      + (f" | partial: {partial}" if partial else "") + "]")
     if session_id:
         # usage may be the raw turn.completed dict; copy so we don't mutate
         # a shared object, and stamp the session id onto it.
@@ -1141,7 +1155,20 @@ def _resolve_model(model: str, provider: str = "claude_cli") -> str:
     Honours the ``CORESMITH_MODEL`` environment variable as a runtime
     override: if set, it wins over whatever the caller passed in. Empty
     or unset model strings fall back to ``DEFAULT_MODEL``.
+
+    SiliconIA: model-fatigue aware. Inside a fallback attempt the per-call
+    override wins; otherwise a primary model that is cooling down (it recently
+    reported capacity/rate-limit errors) is routed to the first healthy model
+    of the configured fallback chain.
     """
+    override = _model_override.get()
+    if override:
+        return _map_model_name(override, provider)
+    return _route_model(_resolve_model_base(model, provider), provider)
+
+
+def _resolve_model_base(model: str, provider: str = "claude_cli") -> str:
+    """Static model resolution (env override -> caller model -> default)."""
     if provider == "codex_cli":
         env_override = (
             os.environ.get("CORESMITH_CODEX_MODEL", "").strip()
@@ -1198,6 +1225,136 @@ def _resolve_model(model: str, provider: str = "claude_cli") -> str:
     elif not model:
         model = DEFAULT_MODEL
     return _CLI_MODEL_MAP.get(model, model)
+
+
+# ---------------------------------------------------------------------------
+# SiliconIA -- model-fatigue fallback (provider-agnostic)
+# ---------------------------------------------------------------------------
+# When a provider rejects a model because it is saturated ("Selected model is
+# at capacity", 429/503, overloaded, rate limit, quota...) the call is retried
+# immediately on the next model of a configurable chain, and the fatigued model
+# is parked for a cooldown so subsequent calls skip it until it recovers.
+#
+#   CORESMITH_MODEL_FALLBACKS             comma-separated chain (any provider)
+#   CORESMITH_<PROVIDER>_MODEL_FALLBACKS  per-provider override, e.g.
+#                                         CORESMITH_CODEX_MODEL_FALLBACKS
+#   CORESMITH_MODEL_COOLDOWN_S            cooldown for a saturated model (300)
+#   CORESMITH_MODEL_UNAVAILABLE_COOLDOWN_S  cooldown for an unknown/forbidden
+#                                         model id (21600)
+#
+# Names go through the same per-provider alias map as the primary model, so
+# short tiers ("sonnet-5") and raw ids ("gpt-5.6-terra") both work.
+
+_model_override: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "coresmith_model_override", default=""
+)
+
+_CAPACITY_SIGNATURES = (
+    "at capacity", "try a different model", "overloaded", "over capacity",
+    "rate limit", "rate_limit", "ratelimit", "too many requests",
+    "usage limit", "quota", "temporarily unavailable", "service unavailable",
+    "server is busy", "server_overloaded", " 429", " 503", " 529",
+)
+# Must mention the model itself, so a generic "path does not exist" in some
+# stderr can never park a healthy model for hours.
+_UNAVAILABLE_RE = _re.compile(
+    r"model[^.\n]{0,60}(not found|does not exist|not supported|unsupported|"
+    r"is not available|not available for)"
+    r"|(unknown|invalid|unsupported)[ _]model|model_not_found"
+    r"|do(es)? not have access to (the )?model"
+)
+
+
+def _classify_llm_failure(text: str) -> str | None:
+    """Return ``"capacity"`` / ``"unavailable"`` when a failure is fixable by
+    switching models, else ``None`` (timeouts, design errors, etc.)."""
+    blob = f" {text or ''}".lower()
+    if _UNAVAILABLE_RE.search(blob):
+        return "unavailable"
+    if any(sig in blob for sig in _CAPACITY_SIGNATURES):
+        return "capacity"
+    return None
+
+
+def _map_model_name(name: str, provider: str) -> str:
+    """Apply the provider's alias map to *name* (no env overrides)."""
+    if provider == "codex_cli":
+        return _CODEX_MODEL_MAP.get(name, name)
+    if provider == "kimi_cli":
+        return _KIMI_MODEL_MAP.get(name, name)
+    if provider == "agy_cli":
+        return _AGY_MODEL_MAP.get(name, name)
+    if provider == "opencode_cli":
+        try:
+            return _opencode_endpoint_models(_opencode_endpoint())[0].get(name, name)
+        except Exception:  # noqa: BLE001
+            return name
+    return _CLI_MODEL_MAP.get(name, name)
+
+
+def _env_float(name: str, default: float) -> float:
+    try:
+        return float(os.environ.get(name, "").strip() or default)
+    except ValueError:
+        return default
+
+
+def _fallback_model_names(provider: str) -> list[str]:
+    key = provider.split("_", 1)[0].upper()
+    raw = (
+        os.environ.get(f"CORESMITH_{key}_MODEL_FALLBACKS", "").strip()
+        or os.environ.get("CORESMITH_MODEL_FALLBACKS", "").strip()
+    )
+    return [s.strip() for s in raw.replace(";", ",").split(",") if s.strip()]
+
+
+class _ModelHealth:
+    """Process-wide cooldown registry shared by every ClaudeLLM instance."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._until: dict[tuple[str, str], float] = {}
+
+    def cooldown_left(self, provider: str, model: str) -> float:
+        with self._lock:
+            until = self._until.get((provider, model), 0.0)
+        return max(0.0, until - _time_mod.monotonic())
+
+    def park(self, provider: str, model: str, seconds: float) -> None:
+        with self._lock:
+            self._until[(provider, model)] = _time_mod.monotonic() + max(0.0, seconds)
+
+    def clear(self, provider: str, model: str) -> None:
+        with self._lock:
+            self._until.pop((provider, model), None)
+
+    def reset(self) -> None:
+        with self._lock:
+            self._until.clear()
+
+
+_MODEL_HEALTH = _ModelHealth()
+
+
+def _model_candidates(primary: str, provider: str) -> list[str]:
+    """Ordered models to try: healthy ones in configured order, then cooling
+    ones by soonest recovery (a fully saturated chain still gets attempted)."""
+    chain: list[str] = []
+    for name in [primary, *(_map_model_name(n, provider) for n in _fallback_model_names(provider))]:
+        if name and name not in chain:
+            chain.append(name)
+    healthy = [m for m in chain if _MODEL_HEALTH.cooldown_left(provider, m) <= 0]
+    cooling = sorted(
+        (m for m in chain if m not in healthy),
+        key=lambda m: _MODEL_HEALTH.cooldown_left(provider, m),
+    )
+    return healthy + cooling
+
+
+def _route_model(primary: str, provider: str) -> str:
+    if not _fallback_model_names(provider):
+        return primary
+    return _model_candidates(primary, provider)[0]
 
 
 def block_model() -> str:
@@ -1698,6 +1855,80 @@ class ClaudeLLM:
     _REAP_GRACE_S: float = 10.0
 
     def _generate_via_cli(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        resume_session_id: str | None = None,
+    ) -> str:
+        """Run one logical LLM call, failing over across the model chain.
+
+        Provider-agnostic: works for every CLI backend because it only looks
+        at the returned error envelope / raised exception text. With no
+        fallback chain configured this is exactly one ``_generate_via_cli_once``.
+        """
+        if self._provider in _TESTING_PROVIDERS:
+            return self._generate_via_cli_once(system_prompt, user_prompt, resume_session_id)
+
+        primary = _resolve_model_base(self.model, self._provider)
+        candidates = _model_candidates(primary, self._provider)
+        if len(candidates) <= 1:
+            return self._generate_via_cli_once(system_prompt, user_prompt, resume_session_id)
+
+        last_output = ""
+        for idx, model in enumerate(candidates):
+            is_last = idx == len(candidates) - 1
+            token = _model_override.set(model)
+            try:
+                # A codex session cannot be resumed on a different model.
+                output = self._generate_via_cli_once(
+                    system_prompt, user_prompt,
+                    resume_session_id if model == primary else None,
+                )
+            except CircuitBreakerOpen:
+                raise
+            except Exception as exc:  # noqa: BLE001 - classify, then re-raise
+                kind = _classify_llm_failure(str(exc))
+                if kind is None or is_last:
+                    raise
+                self._park_fatigued_model(model, kind, str(exc), candidates[idx + 1])
+                continue
+            finally:
+                _model_override.reset(token)
+
+            kind = _classify_llm_failure(output) if is_llm_error_response(output) else None
+            if kind is None:
+                _MODEL_HEALTH.clear(self._provider, model)
+                return output
+            last_output = output
+            if is_last:
+                self._park_fatigued_model(model, kind, output, None)
+                return output
+            self._park_fatigued_model(model, kind, output, candidates[idx + 1])
+        return last_output
+
+    def _park_fatigued_model(
+        self, model: str, kind: str, detail: str, next_model: str | None,
+    ) -> None:
+        cooldown = (
+            _env_float("CORESMITH_MODEL_UNAVAILABLE_COOLDOWN_S", 21600.0)
+            if kind == "unavailable"
+            else _env_float("CORESMITH_MODEL_COOLDOWN_S", 300.0)
+        )
+        _MODEL_HEALTH.park(self._provider, model, cooldown)
+        logger.warning(
+            "Model %s %s (%s); %s", model, kind, (detail or "")[:200],
+            f"falling back to {next_model}" if next_model else "no fallback left",
+        )
+        self._write_llm_event(_llm_log_root(), "llm_model_fallback", {
+            "provider": self._provider,
+            "from_model": model,
+            "to_model": next_model or "",
+            "reason": kind,
+            "cooldown_s": int(cooldown),
+            "detail": (detail or "")[:300],
+        })
+
+    def _generate_via_cli_once(
         self,
         system_prompt: str,
         user_prompt: str,

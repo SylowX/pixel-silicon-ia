@@ -221,6 +221,9 @@ def _daemon_start(args):
         "CORESMITH_LLM_PROVIDER", "CORESMITH_CODEX_MODEL", "CORESMITH_MODEL",
         "CODEX_CLI_PATH", "CODEX_HOME",
         "CORESMITH_CODEX_REASONING_EFFORT", "CORESMITH_CODEX_REASONING_EFFORT_ARCH",
+        # SiliconIA: model-fatigue failover + workdir policy survive restarts.
+        "CORESMITH_BLOCK_MODEL", "CORESMITH_MODEL_FALLBACKS",
+        "CORESMITH_MODEL_COOLDOWN_S", "CORESMITH_CODEX_ISOLATE_WORKDIR",
     )
     try:
         _recorded = set(persisted)

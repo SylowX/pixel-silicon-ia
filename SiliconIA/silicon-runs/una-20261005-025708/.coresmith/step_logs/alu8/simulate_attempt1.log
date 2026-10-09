@@ -1,0 +1,15 @@
+=== SIMULATE LOG ===
+Timestamp: 2026-10-05T10:20:28
+Block: alu8
+Attempt: 1
+Command: /usr/bin/make -C /workspace/silicon-runs/una-20261005-025708/sim_build/alu8
+Return code: 0
+
+=== STDOUT ===
+make: Entering directory '/workspace/silicon-runs/una-20261005-025708/sim_build/alu8'
+rm -f results.xml
+make: Leaving directory '/workspace/silicon-runs/una-20261005-025708/sim_build/alu8'
+
+
+=== STDERR ===
+

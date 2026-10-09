@@ -1,0 +1,16 @@
+# OpenSTA pre-layout report for multiplier8
+# netlist: /workspace/silicon-runs/un-20261005-012618/syn/output/multiplier8/multiplier8_netlist.v
+# sdc: /workspace/silicon-runs/un-20261005-012618/syn/output/multiplier8/multiplier8.sdc
+# liberty: /usr/share/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+# rc: 1
+
+
+
+=== STDERR ===
+Traceback (most recent call last):
+  File "/workspace/coresmith-main/bin/sta", line 109, in <module>
+    raise SystemExit(main())
+  File "/workspace/coresmith-main/bin/sta", line 88, in main
+    os.execv(real_sta, [real_sta, *args])
+FileNotFoundError: [Errno 2] No such file or directory
+

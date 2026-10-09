@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { SiliconHistory } from "./SiliconHistory";
+import { SiliconActivity } from "./SiliconActivity";
 import { isRunning, stopPipeline, useLauncher } from "./siliconLauncher";
 
 // Right-hand column: history of designed circuits + pipeline environment
@@ -43,6 +44,8 @@ export function SiliconSidebar() {
   return (
     <aside id="silicon-sidebar" className="si-panel">
       <SiliconHistory />
+
+      <SiliconActivity />
 
       <div className="si-card">
         <div style={{ fontSize: 10, letterSpacing: "0.12em", color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>ENTORNO</div>

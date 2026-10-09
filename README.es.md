@@ -28,9 +28,16 @@ Este proyecto transforma la especificación en lenguaje natural de un circuito (
   - Porcentaje de utilización
   - Consumo de potencia estimado (mW / µW)
   - Recuento de celdas estándar
+- **Resiliencia LLM Agnóstica y Tolerancia a "Fatiga" de Modelo**: Failover automático e inmediato en caliente (`pipeline_config.yaml`). Si el proveedor o modelo se satura (429, 503, "at capacity"), conmuta instantáneamente al siguiente modelo de respaldo (`fallback_models`) y pone el modelo saturado en enfriamiento (`model_cooldown_s`). Permite overrides directos desde el host con `SILICONIA_LLM_PROVIDER`, `SILICONIA_LLM_MODEL` y `SILICONIA_LLM_FALLBACKS`.
+- **Verificación Funcional con Cocotb 2.x & Verilator 5.036**: Entorno Docker recompilado con soporte nativo para bancos de prueba en Python, permitiendo simulación y cobertura funcional completa antes de la síntesis lógica.
+- **Edificio Interactivo Pixel Art con Dinámica de Descanso (`OfficeCanvas`)**:
+  - **Trabajo vs. Descanso**: Cuando los agentes están en diseño activo operan en sus estaciones de *Desarrollo* o los racks de *Server Room*. Al terminar (100%) o en estado ocioso, se trasladan de forma natural a relajarse a la *Terraza*, la cafetería del *Lobby* o a debatir en la *Sala de Juntas*.
+  - **Sala de Juntas Multi-Asiento**: Mesa de conferencias ampliada con 4 asientos simultáneos.
+  - **Prevención de Solapamiento (Anti-Colisión)**: Sistema de reserva exclusiva de asientos (`claimedSlots`) y deambulación inteligente para evitar que los personajes se encimen.
+  - **Terraza Despejada**: Corrección de artefactos y desenfoque en la piscina.
 - **Compositor de Circuitos con Voz (`SiliconComposer`)**: Barra inferior desplegable para pedir nuevos diseños en lenguaje natural, con soporte para **dictado por voz** en español (Web Speech API) y ejemplos preconfigurados.
 - **Visor GUI de Layout Físico (`SiliconGui`)**: Abre la interfaz gráfica nativa de **OpenROAD GUI** para inspeccionar las pistas metálicas y el empaquetado del chip terminado mediante WSLg (`/tmp/.X11-unix`).
-- **Historial y Consola**: Registro cronológico de chips diseñados, estado del motor Docker y consola de logs del pipeline en tiempo real.
+- **Historial, Tarjeta de Actividad y Parada Inmediata**: Registro cronológico de chips diseñados, eliminación en caliente de corridas con purga de telemetría y tarjeta de actividad, botón de parada de emergencia con reset inmediato a 0% e indicadores de salud de Docker.
 - **Modo Dual**: Visualiza ejecuciones de SiliconIA (por defecto) o sesiones locales de Claude Code mediante Server-Sent Events (SSE).
 
 ---
@@ -95,24 +102,27 @@ pixel-agents-main/
 ├── PROJECT_MEMORY.md                 ← Memoria técnica y arquitectura para agentes
 ├── AGENTS.md                         ← Reglas de Antigravity para este repositorio
 ├── SiliconIA/                        ← Fábrica de diseño de semiconductores
+│   ├── pipeline_config.yaml          ← Configuración centralizada de LLM, modelos y fallbacks
 │   ├── run_pipeline.ps1              ← Launcher PowerShell para Docker
 │   ├── silicon_pipeline.py           ← Orquestador Python multi-agente
-│   ├── Dockerfile                    ← Contenedor unificado (Yosys + OpenROAD + Sky130)
+│   ├── Dockerfile                    ← Contenedor unificado (Verilator 5 + Yosys + OpenROAD + Sky130)
+│   ├── coresmith-main/               ← Red multi-agente y fallbacks de LLM
 │   └── silicon-runs/                 ← Salidas, logs, netlists (.v), ODB y GDSII
 ├── src/
 │   ├── app/
 │   │   ├── api/pixel-agents/
 │   │   │   ├── silicon-stream/       ← Streaming SSE de eventos de silicio
-│   │   │   ├── silicon-launch/       ← Endpoint de control y ejecución del pipeline
+│   │   │   ├── silicon-launch/       ← Endpoint de control, lanzamiento y aborto
 │   │   │   ├── silicon-gui/          ← Lanzador del visor OpenROAD GUI (WSLg)
-│   │   │   └── silicon-runs/         ← API de historial y métricas
+│   │   │   └── silicon-runs/         ← API de historial, métricas y eliminación de corridas
 │   │   └── pixel-agents/
 │   │       ├── page.tsx              ← Vista de 3 columnas (Tablero · Píxeles · Entorno)
 │   │       ├── SiliconBoard.tsx      ← Tablero de agentes, checklist y métricas
 │   │       ├── SiliconComposer.tsx   ← Entrada de prompt con voz y ejemplos
 │   │       ├── SiliconSidebar.tsx    ← Historial, estado de Docker y visor de consola
+│   │       ├── SiliconActivity.tsx   ← Tarjeta de actividad en vivo y eventos del pipeline
 │   │       ├── DeskCanvas.tsx        ← Renderizado de los 6 escritorios animados
-│   │       └── OfficeCanvas.tsx      ← Edificio de oficinas de pixel art
+│   │       └── OfficeCanvas.tsx      ← Edificio de oficinas de pixel art multi-nivel
 │   └── lib/
 │       ├── siliconia.ts              ← Tipos, checklists, parser de métricas y telemetría
 │       └── localGuard.ts             ← Protección de seguridad loopback para endpoints

@@ -1,0 +1,15 @@
+# Auto-generated synthesis script for alu8
+read_verilog "/workspace/silicon-runs/una-20261005-025708/rtl/alu8/alu8.v"
+hierarchy -top alu8
+proc
+flatten
+opt
+synth -run begin:fine
+memory_bram
+memory_map
+synth -run fine:
+dfflibmap -liberty /usr/share/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+abc -liberty /usr/share/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+opt_clean
+stat -liberty /usr/share/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+write_verilog -noattr /workspace/silicon-runs/una-20261005-025708/syn/output/alu8/alu8_netlist.v

@@ -232,7 +232,10 @@ def load_config() -> dict:
         },
         "llm": {
             "provider": "codex",
-            "codex_model": "gpt-5.6-sol",
+            "model": "gpt-5.6-sol",
+            "fallback_models": ["gpt-5.6-terra", "gpt-5.6", "gpt-5.5"],
+            "model_cooldown_s": 300,
+            "isolate_workdir": False,
         },
     }
 
@@ -267,24 +270,65 @@ class CoreSmithPhase:
         )
         return req_path
 
+    # Per-provider env var that pins the model (CoreSmith reads it first).
+    _PROVIDER_MODEL_ENV = {
+        "codex": "CORESMITH_CODEX_MODEL", "codex_cli": "CORESMITH_CODEX_MODEL",
+        "kimi": "CORESMITH_KIMI_MODEL", "kimi_cli": "CORESMITH_KIMI_MODEL",
+        "agy": "CORESMITH_AGY_MODEL", "agy_cli": "CORESMITH_AGY_MODEL",
+        "opencode": "CORESMITH_OPENCODE_MODEL", "opencode_cli": "CORESMITH_OPENCODE_MODEL",
+    }
+
     def setup_environment(self):
-        """Set environment variables for CoreSmith."""
+        """Set environment variables for CoreSmith.
+
+        Provider-agnostic: `llm.model` is the primary model and
+        `llm.fallback_models` the chain CoreSmith fails over to when a model
+        reports capacity / rate-limit errors ("model fatigue"). Host env vars
+        SILICONIA_LLM_PROVIDER / SILICONIA_LLM_MODEL / SILICONIA_LLM_FALLBACKS
+        override the YAML without editing it.
+        """
         env = os.environ.copy()
-        llm_cfg = self.config.get("llm", {})
+        llm_cfg = self.config.get("llm", {}) or {}
+
+        provider = (os.environ.get("SILICONIA_LLM_PROVIDER") or llm_cfg.get("provider") or "codex").strip()
+        model = (os.environ.get("SILICONIA_LLM_MODEL") or llm_cfg.get("model")
+                 or llm_cfg.get("codex_model") or "gpt-5.6-sol").strip()
+        block_model = (os.environ.get("SILICONIA_LLM_MODEL") or llm_cfg.get("block_model") or model).strip()
+        fallbacks = os.environ.get("SILICONIA_LLM_FALLBACKS")
+        if fallbacks is None:
+            raw = llm_cfg.get("fallback_models") or []
+            fallbacks = ",".join(raw) if isinstance(raw, (list, tuple)) else str(raw)
+        fallbacks = ",".join(m.strip() for m in fallbacks.replace(";", ",").split(",")
+                             if m.strip() and m.strip() != model)
 
         env["CORESMITH_PROJECT_ROOT"] = str(self.run_dir)
-        env["CORESMITH_LLM_PROVIDER"] = llm_cfg.get("provider", "codex")
-        env["CORESMITH_CODEX_MODEL"] = llm_cfg.get("codex_model", "gpt-5.6-sol")
-        env["CORESMITH_MODEL"] = llm_cfg.get("codex_model", "gpt-5.6-sol")
-        env["CORESMITH_BLOCK_MODEL"] = llm_cfg.get("block_model", "gpt-5.6-sol")
+        env["CORESMITH_LLM_PROVIDER"] = provider
+        env["CORESMITH_MODEL"] = model
+        env["CORESMITH_BLOCK_MODEL"] = block_model
+        for var in set(self._PROVIDER_MODEL_ENV.values()):
+            env.pop(var, None)  # drop stale pins from Dockerfile / docker -e
+        pin_var = self._PROVIDER_MODEL_ENV.get(provider.lower())
+        if pin_var:
+            env[pin_var] = model
+        env["CORESMITH_MODEL_FALLBACKS"] = fallbacks
+        env["CORESMITH_MODEL_COOLDOWN_S"] = str(llm_cfg.get("model_cooldown_s", 300))
+        if llm_cfg.get("reasoning_effort"):
+            env["CORESMITH_CODEX_REASONING_EFFORT"] = str(llm_cfg["reasoning_effort"])
+        # Run the agent CLI inside the run dir instead of an empty codex-call-*
+        # scratch dir: relative paths (rtl/..., tb/...) then resolve and the
+        # agent stops "losing" the files it writes.
+        env["CORESMITH_CODEX_ISOLATE_WORKDIR"] = "1" if llm_cfg.get("isolate_workdir", False) else "0"
         env["CORESMITH_CODEX_SANDBOX"] = llm_cfg.get("codex_sandbox", "danger-full-access")
+        log_step(f"LLM: {provider} · modelo {model}"
+                 + (f" · respaldo {fallbacks.replace(',', ' → ')}" if fallbacks else " · sin respaldo"), "done")
         env["CORESMITH_ENABLE_MEMORY_MAP"] = "0"
         env["CORESMITH_ENABLE_CLOCK_TREE"] = "0"
         env["CORESMITH_ENABLE_REGISTER_SPEC"] = "0"
         env["CORESMITH_ALLOW_NO_OPENRAM"] = "1"
         env["PDK_ROOT"] = "/usr/share/pdk"
 
-        # Ensure Verilator compatibility shim is active (strips -Wno-EOFNEWLINE for Verilator 4.038)
+        # Ensure Verilator shim is active: delegates to /opt/verilator (5.036, required by
+        # cocotb 2.x); falls back to apt Verilator 4.038 stripping -Wno-EOFNEWLINE.
         shim_source = Path("/workspace/verilator_shim.sh")
         shim_target = Path("/usr/local/bin/verilator")
         if shim_source.exists():
@@ -515,6 +559,16 @@ class CoreSmithPhase:
                                     last_heartbeat_time = time.time()
                                 elif ev_type == "llm_end":
                                     log_step(f"[LLM Done] Generated {ev.get('output_chars', 0)} characters", "done")
+                                    last_heartbeat_time = time.time()
+                                elif ev_type == "llm_model_fallback":
+                                    frm, to = ev.get("from_model", "?"), ev.get("to_model") or ""
+                                    why = "saturado" if ev.get("reason") == "capacity" else "no disponible"
+                                    if to:
+                                        log(f"  ⚠️  [Modelo {why}] {frm} → cambiando a {to} "
+                                            f"(enfriamiento {ev.get('cooldown_s', 0)}s)", C.MAGENTA)
+                                    else:
+                                        log(f"  ⚠️  [Modelo {why}] {frm} — todos los modelos de respaldo agotados; "
+                                            f"CoreSmith reintentará con backoff", C.RED)
                                     last_heartbeat_time = time.time()
                                 elif ev_type == "graph_node_enter":
                                     log_step(f"[Stage] Entering: {node}", "running")
@@ -1190,7 +1244,10 @@ class SiliconPipeline:
         runs_base.mkdir(parents=True, exist_ok=True)
 
         # Sanitize design hint for directory name
-        safe_name = re.sub(r'[^\w\-]', '_', design_hint.lower())[:30]
+        clean_hint = unicodedata.normalize('NFKD', design_hint).encode('ascii', 'ignore').decode('ascii')
+        if not clean_hint.strip():
+            clean_hint = "design"
+        safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', clean_hint.lower())[:30]
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         run_dir = runs_base / f"{safe_name}-{ts}"
         run_dir.mkdir(parents=True, exist_ok=True)

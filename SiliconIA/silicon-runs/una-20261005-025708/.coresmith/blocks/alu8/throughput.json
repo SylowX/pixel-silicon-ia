@@ -1,0 +1,14 @@
+{
+  "gate": "measured_throughput",
+  "scope": "block",
+  "applicable": true,
+  "passed": true,
+  "measured_cyc_per_op": 1.0,
+  "declared_cyc_per_op": 1.0,
+  "threshold_cyc_per_op": 1.1,
+  "ratio": 1.0,
+  "n_ops": 32,
+  "artifact_missing": false,
+  "reason": "",
+  "report": ""
+}

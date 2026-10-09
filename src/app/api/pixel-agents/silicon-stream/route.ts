@@ -5,6 +5,7 @@ import {
   JsonlTailer,
   SiliconModel,
   eventFiles,
+  readCurrentRun,
   resolveRunId,
   runDir,
   sortEvents,
@@ -150,6 +151,10 @@ export async function GET(req: NextRequest) {
         }
         model = new SiliconModel(id, readPrompt(dir), "live", synthetic);
         for (const ev of history) model.apply(ev);
+        const cur = readCurrentRun();
+        if (cur?.run_id === id && cur?.status === "aborted" && model.pipeline.status !== "aborted") {
+          model.abort("user_stop");
+        }
         send("session_change", { sessionId: id });
         send("snapshot", model.snapshot());
         send("pipeline", model.pipeline);
@@ -161,7 +166,17 @@ export async function GET(req: NextRequest) {
             const next = resolveRunId(null);
             if (next !== runId) { init(next); return; }
           }
+          if (runId && !fs.existsSync(runDir(runId))) {
+            init(resolveRunId(null));
+            return;
+          }
           if (!model) return;
+          const cur = readCurrentRun();
+          if (cur?.run_id === runId && cur?.status === "aborted" && model.pipeline.status !== "aborted") {
+            const abortUpdates = model.abort("user_stop");
+            for (const u of abortUpdates) send("agent_update", u);
+            send("pipeline", model.pipeline);
+          }
           const batch = sortEvents(tailers.flatMap((t) => t.readNew()));
           if (!batch.length) return;
           const updates: AgentUpdateEvent[] = [];

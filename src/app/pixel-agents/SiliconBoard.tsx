@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAgentData } from "./AgentDataContext";
-import type { AgentTask, FeedItem, SiliconRole, StepState, TaskStep } from "@/lib/siliconia";
+import type { AgentTask, SiliconRole, StepState, TaskStep } from "@/lib/siliconia";
 import { OpenGuiButton } from "./SiliconGui";
 
 // Left-hand progress board: what every agent is doing right now, which task it
@@ -34,9 +34,6 @@ const STATUS_RGB: Record<AgentTask["status"], string> = {
 const STEP_ICON: Record<StepState, string> = { pending: "○", running: "●", done: "✓", failed: "✗", skipped: "–" };
 const STEP_COLOR: Record<StepState, string> = {
   pending: "rgba(255,255,255,0.28)", running: "#38bdf8", done: "#34d399", failed: "#f43f5e", skipped: "rgba(255,255,255,0.28)",
-};
-const FEED_COLOR: Record<FeedItem["kind"], string> = {
-  info: "rgba(255,255,255,0.55)", ok: "#34d399", error: "#f43f5e", warn: "#fbbf24",
 };
 const METRICS: { key: string; label: string; fmt: (v: number) => string }[] = [
   { key: "design_area_um2", label: "área", fmt: (v) => `${Math.round(v).toLocaleString("es-MX")} µm²` },
@@ -197,10 +194,16 @@ export function SiliconBoard() {
   const live = pipeline.mode === "live" && pipeline.status === "running";
   const now = live ? Date.now() / 1000 : pipeline.updatedTs; // `tick` re-renders every second
   const elapsed = pipeline.startedTs !== null ? now - pipeline.startedTs : 0;
-  const statusRgb = pipeline.status === "done" ? "52,211,153" : pipeline.status === "error" ? "244,63,94" : pipeline.status === "running" ? "56,189,248" : "148,163,184";
-  const statusText = pipeline.status === "done" ? "completado" : pipeline.status === "error" ? "con error" : pipeline.status === "running" ? "en curso" : "inactivo";
+  const statusRgb = pipeline.status === "done" ? "52,211,153"
+                  : pipeline.status === "error" || pipeline.status === "aborted" ? "244,63,94"
+                  : pipeline.status === "running" ? "56,189,248"
+                  : "148,163,184";
+  const statusText = pipeline.status === "done" ? "completado"
+                   : pipeline.status === "aborted" ? "abortado"
+                   : pipeline.status === "error" ? "con error"
+                   : pipeline.status === "running" ? "en curso"
+                   : "inactivo";
   const metrics = METRICS.filter((m) => pipeline.metrics[m.key] !== undefined);
-  const feed = [...pipeline.feed].reverse();
 
   return (
     <aside id="silicon-board" className="si-panel">
@@ -270,22 +273,6 @@ export function SiliconBoard() {
       {ROLES.map((meta) => (
         <AgentCard key={meta.role} meta={meta} task={pipeline.tasks?.[meta.role]} detail={details.get(meta.role)} now={now} />
       ))}
-
-      <div className="si-card">
-        <div style={{ fontSize: 10, letterSpacing: "0.12em", color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>ACTIVIDAD</div>
-        <div id="silicon-feed" style={{ display: "flex", flexDirection: "column", gap: 3, maxHeight: 220, overflow: "auto" }}>
-          {feed.length === 0 && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>—</span>}
-          {feed.map((f, i) => {
-            const meta = ROLES.find((r) => r.role === f.role);
-            return (
-              <div key={`${f.ts}-${i}`} style={{ fontSize: 10.5, display: "flex", gap: 6, lineHeight: 1.4 }}>
-                <span style={{ color: `rgb(${meta?.rgb ?? "255,255,255"})`, flexShrink: 0, minWidth: 66 }}>{meta?.name}</span>
-                <span style={{ color: FEED_COLOR[f.kind], wordBreak: "break-word" }}>{f.text}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </aside>
   );
 }

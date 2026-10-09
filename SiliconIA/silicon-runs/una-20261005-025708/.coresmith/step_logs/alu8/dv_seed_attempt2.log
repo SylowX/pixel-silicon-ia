@@ -1,0 +1,9 @@
+=== DV_SEED LOG ===
+Timestamp: 2026-10-05T10:21:24
+Block: alu8
+Attempt: 2
+Command: CORESMITH_DV_SEED 278008966286052175
+Return code: N/A (exception)
+
+=== ERROR ===
+per-run DV seed for alu8: 278008966286052175
